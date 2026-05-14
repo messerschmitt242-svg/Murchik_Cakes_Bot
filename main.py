@@ -56,59 +56,35 @@ app = Application.builder().token(
 
 init_db()
 
-app.add_handler(add_product_handler)
-app.add_handler(CommandHandler("delete_product", delete_product))
-app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
+add_product_handler = ConversationHandler(
+    entry_points=[
+        CommandHandler("add", add_product_start)
+    ],
 
-app.add_handler(CallbackQueryHandler(add_to_cart, pattern="add_"))
-app.add_handler(CallbackQueryHandler(plus_item, pattern="plus_"))
-app.add_handler(CallbackQueryHandler(minus_item, pattern="minus_"))
-app.add_handler(CallbackQueryHandler(delete_item, pattern="del_"))
-app.add_handler(CallbackQueryHandler(checkout, pattern="checkout"))
+    states={
 
-app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
+        PHOTO: [
+            MessageHandler(
+                filters.PHOTO,
+                add_photo
+            ),
 
-app.add_handler(CommandHandler("orders", list_orders))
-app.add_handler(CommandHandler("set_status", set_status))
+            CallbackQueryHandler(
+                finish_add,
+                pattern="finish_add"
+            )
+        ],
 
-app.add_handler(
-    MessageHandler(filters.Regex("📦 Мої замовлення"), my_orders)
-)
+        NAME: [
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND,
+                add_name
+            )
+        ]
+    },
 
-app.add_handler(
-    CallbackQueryHandler(finish_add, pattern="finish_add")
-)
-
-app.add_handler(
-    MessageHandler(filters.Regex("📍 Контакти"), contacts)
-)
-
-app.add_handler(
-    CommandHandler(
-        "start",
-        start
-    )
-)
-
-app.add_handler(
-    CommandHandler(
-        "id",
-        get_id
-    )
-)
-
-app.add_handler(
-    MessageHandler(
-        filters.Regex("🍰 Каталог"),
-        show_products
-    )
-)
-
-app.add_handler(
-    MessageHandler(
-        filters.Regex("❓ FAQ"),
-        faq
-    )
+    fallbacks=[],
+    allow_reentry=True
 )
 
 order_handler = ConversationHandler(
@@ -146,40 +122,36 @@ order_handler = ConversationHandler(
     fallbacks=[]
 )
 
-app.add_handler(
-    order_handler
-)
+app.add_handler(add_product_handler)
+app.add_handler(CommandHandler("delete_product", delete_product))
+app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
 
-add_product_handler = ConversationHandler(
-    entry_points=[
-        CommandHandler("add", add_product_start)
-    ],
+app.add_handler(CallbackQueryHandler(add_to_cart, pattern="add_"))
+app.add_handler(CallbackQueryHandler(plus_item, pattern="plus_"))
+app.add_handler(CallbackQueryHandler(minus_item, pattern="minus_"))
+app.add_handler(CallbackQueryHandler(delete_item, pattern="del_"))
+app.add_handler(CallbackQueryHandler(checkout, pattern="checkout"))
 
-    states={
+app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
 
-        PHOTO: [
-            MessageHandler(
-                filters.PHOTO,
-                add_photo
-            ),
+app.add_handler(CommandHandler("orders", list_orders))
+app.add_handler(CommandHandler("set_status", set_status))
 
-            CallbackQueryHandler(
-                finish_add,
-                pattern="finish_add"
-            )
-        ],
+app.add_handler(MessageHandler(filters.Regex("📦 Мої замовлення"), my_orders))
 
-        NAME: [
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND,
-                add_name
-            )
-        ]
-    },
+app.add_handler(CallbackQueryHandler(finish_add, pattern="finish_add"))
 
-    fallbacks=[],
-    allow_reentry=True
-)
+app.add_handler(MessageHandler(filters.Regex("📍 Контакти"), contacts))
+
+app.add_handler(CommandHandler("start", start))
+
+app.add_handler(CommandHandler("id", get_id))
+
+app.add_handler(MessageHandler(filters.Regex("🍰 Каталог"), show_products))
+
+app.add_handler(MessageHandler(filters.Regex("❓ FAQ"), faq))
+
+app.add_handler(order_handler)
 
 print("Bot started")
 
