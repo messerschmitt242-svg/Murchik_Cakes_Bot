@@ -7,6 +7,6 @@ from keyboards.main_menu import main_menu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "Вітаємо вас у кондитерскій "У Мурчика" 🎂",
+        'Вітаємо вас у кондитерскій "У Мурчика" 🎂',
         reply_markup=main_menu
     )
