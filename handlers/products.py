@@ -105,6 +105,7 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🛒 Додати в кошик", callback_data=f"add_{product_id}")],
+        [InlineKeyboardButton("❤️ Додати в обране", callback_data=f"favorite_{product_id}")],
         [InlineKeyboardButton("⬅️ Назад до категорії", callback_data=f"catalog_category_{product['category']}")],
     ])
 

@@ -114,6 +114,7 @@ def delete_product_by_id(product_id: int) -> bool:
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM cart WHERE product_id = ?", (product_id,))
+    cursor.execute("DELETE FROM favorites WHERE product_id = ?", (product_id,))
     cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
     deleted = cursor.rowcount > 0
     conn.commit()

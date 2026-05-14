@@ -73,6 +73,37 @@ from handlers.cart import (
     PROMO_CODE,
 )
 
+from handlers.favorites import (
+    toggle_favorite,
+    show_favorites,
+)
+
+from handlers.reviews import (
+    review_start,
+    review_get_text,
+    review_choose_rating,
+    review_cancel,
+    show_reviews_admin,
+    REVIEW_TEXT,
+    REVIEW_RATING,
+)
+
+from handlers.custom_order import (
+    custom_order_start,
+    custom_get_name,
+    custom_get_phone,
+    custom_get_description,
+    custom_get_date,
+    custom_get_photo,
+    custom_skip_photo,
+    custom_cancel,
+    CUSTOM_NAME,
+    CUSTOM_PHONE,
+    CUSTOM_DESCRIPTION,
+    CUSTOM_DATE,
+    CUSTOM_PHOTO,
+)
+
 
 async def error_handler(update, context):
     print("ERROR:")
@@ -139,6 +170,55 @@ def build_app():
         allow_reentry=True,
     )
 
+
+    review_handler = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^💬 Відгуки$"), review_start),
+        ],
+        states={
+            REVIEW_TEXT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, review_get_text),
+            ],
+            REVIEW_RATING: [
+                CallbackQueryHandler(review_choose_rating, pattern=r"^review_rating_[1-5]$"),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", review_cancel),
+            CallbackQueryHandler(review_cancel, pattern="^review_cancel$"),
+        ],
+        allow_reentry=True,
+    )
+
+    custom_order_handler = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^🎂 Індивідуальне замовлення$"), custom_order_start),
+        ],
+        states={
+            CUSTOM_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, custom_get_name),
+            ],
+            CUSTOM_PHONE: [
+                MessageHandler(filters.CONTACT | (filters.TEXT & ~filters.COMMAND), custom_get_phone),
+            ],
+            CUSTOM_DESCRIPTION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, custom_get_description),
+            ],
+            CUSTOM_DATE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, custom_get_date),
+            ],
+            CUSTOM_PHOTO: [
+                MessageHandler(filters.PHOTO, custom_get_photo),
+                CallbackQueryHandler(custom_skip_photo, pattern="^custom_skip_photo$"),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", custom_cancel),
+            CallbackQueryHandler(custom_cancel, pattern="^custom_cancel$"),
+        ],
+        allow_reentry=True,
+    )
+
     # Команды
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("id", get_id))
@@ -154,11 +234,14 @@ def build_app():
     app.add_handler(checkout_handler)
     app.add_handler(cart_promo_handler)
     app.add_handler(promo_handler)
+    app.add_handler(review_handler)
+    app.add_handler(custom_order_handler)
 
     # Inline-кнопки каталога
     app.add_handler(CallbackQueryHandler(catalog_back, pattern="^catalog_back$"))
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^catalog_category_"))
     app.add_handler(CallbackQueryHandler(show_product_detail, pattern=r"^catalog_product_\d+$"))
+    app.add_handler(CallbackQueryHandler(toggle_favorite, pattern=r"^favorite_\d+$"))
 
     # Inline-кнопки админки и удаления
     app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
@@ -175,7 +258,9 @@ def build_app():
     app.add_handler(MessageHandler(filters.Regex("^🍰 Каталог$"), show_products))
     app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
     app.add_handler(MessageHandler(filters.Regex("^📦 Мої замовлення$"), my_orders))
+    app.add_handler(MessageHandler(filters.Regex("^❤️ Обране$"), show_favorites))
     app.add_handler(MessageHandler(filters.Regex("^📋 Активні замовлення$"), active_orders))
+    app.add_handler(CommandHandler("reviews", show_reviews_admin))
     app.add_handler(MessageHandler(filters.Regex("^❓ FAQ$"), faq))
     app.add_handler(MessageHandler(filters.Regex("^📍 Контакти$"), contacts))
 
