@@ -1,6 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
+print("CONTACTS TRIGGERED")
 
 async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
