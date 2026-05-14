@@ -3,7 +3,7 @@ from telegram.ext import (ContextTypes,ConversationHandler,MessageHandler,filter
 from keyboards.main_menu import main_menu
 from config import ADMIN_ID
 from config import ADMIN_ID
-
+from database.db import get_conn
 
 NAME = 1
 PHONE = 2
@@ -92,3 +92,20 @@ async def get_cake(
     )
 
     return ConversationHandler.END
+
+conn = get_conn()
+cursor = conn.cursor()
+
+cursor.execute("""
+    INSERT INTO orders (user_id, name, phone, product, status)
+    VALUES (?, ?, ?, ?, ?)
+""", (
+    update.effective_user.id,
+    context.user_data["name"],
+    context.user_data["phone"],
+    context.user_data["cake"],
+    "Прийнято"
+))
+
+conn.commit()
+conn.close()
