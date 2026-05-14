@@ -18,7 +18,6 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for p in products:
 
-        # 🧠 защита от отсутствующих данных
         product_id = p.get("id")
         name = p.get("name", "Без названия")
         price = p.get("price", "—")
@@ -31,7 +30,6 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📝 {desc}
 """
 
-        # 🛒 кнопка "добавить в корзину"
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
@@ -41,19 +39,12 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
-        # 📸 если есть фото
         if photos:
-
             await update.message.reply_photo(
                 photo=photos[0],
                 caption=caption,
                 reply_markup=keyboard
             )
-
-            # ⚠️ остальные фото без спама текста
-            for ph in photos[1:]:
-                await update.message.reply_photo(photo=ph)
-
         else:
             await update.message.reply_text(
                 caption,
@@ -61,6 +52,6 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
     await update.message.reply_text(
-        "📍 Виберіть товар вище або перейдіть в кошик 🛒",
+        "📍 Оберіть товар або відкрийте кошик 🛒",
         reply_markup=main_menu
     )
