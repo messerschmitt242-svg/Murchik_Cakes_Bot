@@ -3,10 +3,13 @@ from telegram.ext import ContextTypes
 
 from database.products_db import get_all_products
 from database.db import get_conn
-
+from config import ADMIN_ID
 
 async def delete_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if update.effective_user.id != ADMIN_ID:
+        return
+        
     products = get_all_products()
 
     if not products:
