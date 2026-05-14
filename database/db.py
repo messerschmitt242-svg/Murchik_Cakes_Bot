@@ -1,18 +1,16 @@
 import sqlite3
-import json
 
-DB_NAME = "bot.db"
-
+DB_PATH = "data.db"
 
 def get_conn():
-    return sqlite3.connect(DB_NAME)
+    return sqlite3.connect(DB_PATH)
+DB_NAME = "bot.db"
 
-
-def init_db():
+ddef init_db():
     conn = get_conn()
-    cursor = conn.cursor()
+    c = conn.cursor()
 
-    cursor.execute("""
+    c.execute("""
     CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
@@ -22,16 +20,23 @@ def init_db():
     )
     """)
 
-    cursor.execute("""
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS cart (
+        user_id INTEGER,
+        product_id INTEGER,
+        qty INTEGER
+    )
+    """)
+
+    c.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         name TEXT,
         phone TEXT,
-        product TEXT,
         status TEXT
     )
     """)
-    
+
     conn.commit()
     conn.close()
