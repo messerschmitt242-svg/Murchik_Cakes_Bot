@@ -1,6 +1,6 @@
 from telegram import ReplyKeyboardMarkup
 
-from config import ADMIN_ID
+from config import is_admin
 
 
 def get_main_menu(user_id: int | None = None):
@@ -11,7 +11,7 @@ def get_main_menu(user_id: int | None = None):
     ]
 
     # Адмінське меню бачить тільки власник бота
-    if ADMIN_ID and user_id == ADMIN_ID:
+    if is_admin(user_id):
         rows.insert(2, ["📋 Активні замовлення", "🎟 Промокоди"])
         rows.insert(3, ["➕ Додати продукт", "🗑 Видалити продукт"])
 
