@@ -16,6 +16,7 @@ from handlers.products import show_products
 from handlers.delete_product import delete_product, confirm_delete
 from handlers.add_product import finish_add
 from handlers.catalog import catalog
+from handlers.admin_orders import list_orders, set_status
 from handlers.my_orders import my_orders
 from handlers.contacts import contacts
 from handlers.add_product import (
