@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from config import is_admin
+from handlers.cleanup import delete_callback_message
 from database.orders_db import (
     STATUSES,
     get_all_orders,
@@ -108,8 +109,14 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     order_id = int(query.data.split("_")[-1])
     order = get_order(order_id)
 
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
     if not order:
-        await query.message.reply_text("Замовлення не знайдено.")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Замовлення не знайдено."
+        )
         return
 
     next_value, button_text = next_status(order["status"])
@@ -132,7 +139,11 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(button_text, callback_data=f"admin_next_status_{order['id']}")]
         ])
 
-    await query.message.reply_text(text, reply_markup=keyboard)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=keyboard
+    )
 
 
 async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -146,17 +157,29 @@ async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYP
     order_id = int(query.data.split("_")[-1])
     order = get_order(order_id)
 
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
     if not order:
-        await query.message.reply_text("Замовлення не знайдено.")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Замовлення не знайдено."
+        )
         return
 
     next_value, _ = next_status(order["status"])
     if not next_value:
-        await query.message.reply_text("Замовлення вже завершено.")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Замовлення вже завершено."
+        )
         return
 
     update_order_status(order_id, next_value)
-    await query.message.reply_text(f"✅ Статус замовлення #{order_id} змінено на: {next_value}")
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"✅ Статус замовлення #{order_id} змінено на: {next_value}"
+    )
 
     refreshed = get_order(order_id)
     next_next_value, button_text = next_status(refreshed["status"])
@@ -164,4 +187,8 @@ async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYP
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton(button_text, callback_data=f"admin_next_status_{order_id}")]
         ])
-        await query.message.reply_text("Наступна дія:", reply_markup=keyboard)
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Наступна дія:",
+            reply_markup=keyboard
+        )

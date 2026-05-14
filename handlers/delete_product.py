@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from config import is_admin
 from database.products_db import get_all_products, delete_product_by_id
+from handlers.cleanup import delete_callback_message
 
 
 async def delete_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -40,7 +41,16 @@ async def delete_product_callback(update: Update, context: ContextTypes.DEFAULT_
     product_id = int(query.data.split("_")[-1])
     deleted = delete_product_by_id(product_id)
 
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
     if deleted:
-        await query.message.edit_text(f"✅ Товар ID {product_id} видалено.")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"✅ Товар ID {product_id} видалено."
+        )
     else:
-        await query.message.edit_text(f"❌ Товар ID {product_id} не знайдено.")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"❌ Товар ID {product_id} не знайдено."
+        )

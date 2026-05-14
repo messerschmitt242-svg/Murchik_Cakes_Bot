@@ -12,6 +12,7 @@ from database.cart_db import (
 )
 from database.orders_db import create_order
 from keyboards.main_menu import get_main_menu
+from handlers.cleanup import delete_callback_message
 
 CART_NAME = 200
 CART_PHONE = 201
@@ -58,7 +59,13 @@ async def add_to_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_to_cart_db(user_id, product_id)
 
-    await query.message.reply_text("✅ Додано у кошик 🛒")
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="✅ Додано у кошик 🛒"
+    )
 
 
 async def show_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -114,7 +121,13 @@ async def promo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     product_id = int(query.data.split("_")[-1])
     context.user_data["promo_product_id"] = product_id
 
-    await query.message.reply_text("Введіть промокод для цього товару:")
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="Введіть промокод для цього товару:"
+    )
     return PROMO_CODE
 
 
@@ -157,7 +170,13 @@ async def checkout_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("Кошик порожній 🛒")
         return ConversationHandler.END
 
-    await query.message.reply_text("Ваше ім'я:")
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="Ваше ім'я:"
+    )
     return CART_NAME
 
 

@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from config import is_admin
 from database.promo_db import create_promo, get_all_promos
+from handlers.cleanup import delete_callback_message
 
 PROMO_CODE_INPUT = 300
 PROMO_DISCOUNT_SELECT = 301
@@ -39,8 +40,12 @@ async def promo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(query.from_user.id):
         return ConversationHandler.END
 
-    await query.message.reply_text(
-        "Введіть код промокоду. Наприклад: MURCHIK20 або TORT10"
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="Введіть код промокоду. Наприклад: MURCHIK20 або TORT10"
     )
     return PROMO_CODE_INPUT
 
@@ -68,18 +73,25 @@ async def promo_choose_discount(update: Update, context: ContextTypes.DEFAULT_TY
     if not is_admin(query.from_user.id):
         return ConversationHandler.END
 
+    chat_id = query.message.chat_id
+    await delete_callback_message(query)
+
     discount = int(query.data.split("_")[-1])
     code = context.user_data.get("new_promo_code")
 
     if not code:
-        await query.message.reply_text("Помилка: код не знайдено. Почніть знову через /promo")
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Помилка: код не знайдено. Почніть знову через кнопку Промокоди"
+        )
         return ConversationHandler.END
 
     create_promo(code, discount)
     context.user_data.pop("new_promo_code", None)
 
-    await query.message.reply_text(
-        f"✅ Промокод створено:\n{code} — -{discount}%"
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"✅ Промокод створено:\n{code} — -{discount}%"
     )
     return ConversationHandler.END
 
@@ -88,7 +100,12 @@ async def promo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         query = update.callback_query
         await query.answer()
-        await query.message.reply_text("Створення промокоду скасовано.")
+        chat_id = query.message.chat_id
+        await delete_callback_message(query)
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Створення промокоду скасовано."
+        )
     elif update.message:
         await update.message.reply_text("Створення промокоду скасовано.")
 
