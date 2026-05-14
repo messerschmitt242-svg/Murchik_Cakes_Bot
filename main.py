@@ -17,7 +17,15 @@ from handlers.delete_product import delete_product, confirm_delete
 from handlers.add_product import finish_add
 from handlers.catalog import catalog
 from handlers.admin_orders import list_orders, set_status
-from handlers.cart import add_to_cart, show_cart
+from handlers.cart import (
+    add_to_cart,
+    show_cart,
+    plus_item,
+    minus_item,
+    delete_item,
+    checkout,
+    save_order
+)
 from telegram.ext import CallbackQueryHandler, MessageHandler, filters
 from handlers.my_orders import my_orders
 from handlers.contacts import contacts
@@ -51,6 +59,11 @@ app = Application.builder().token(
 app.add_handler(CommandHandler("delete_product", delete_product))
 
 app.add_handler(CallbackQueryHandler(add_to_cart, pattern="add_"))
+app.add_handler(CallbackQueryHandler(plus_item, pattern="plus_"))
+app.add_handler(CallbackQueryHandler(minus_item, pattern="minus_"))
+app.add_handler(CallbackQueryHandler(delete_item, pattern="del_"))
+app.add_handler(CallbackQueryHandler(checkout, pattern="checkout"))
+
 app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
 
 app.add_handler(CommandHandler("orders", list_orders))
