@@ -4,35 +4,26 @@ from telegram.ext import ContextTypes
 from database.products import PRODUCTS
 
 
-async def show_cakes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    category = None
+    product = {
+        "name": "Сникерс",
+        "photos": ["file_id1", "file_id2"]
+    }
 
-    text = update.message.text
+    caption = f"🍰 {product['name']}"
 
-    if text == "🍰 Торти":
-        category = "cakes"
+    photos = product.get("photos", [])
 
-    elif text == "🍮 Тістечка":
-        category = "desserts"
+    # отправляем первую с текстом
+    if photos:
+        await update.message.reply_photo(
+            photo=photos[0],
+            caption=caption
+        )
 
-    if not category:
-        return
-
-    products = PRODUCTS.get(category, [])
-
-    for p in products:
-
-        caption = f"""
-🍰 {p['name']}
-💰 {p['price']}
-📝 {p['desc']}
-"""
-
-        if p["photo"]:
-            await update.message.reply_photo(
-                photo=p["photo"],
-                caption=caption
-            )
-        else:
-            await update.message.reply_text(caption)
+        # остальные просто как фото
+        for p in photos[1:]:
+            await update.message.reply_photo(photo=p)
+    else:
+        await update.message.reply_text(caption)
