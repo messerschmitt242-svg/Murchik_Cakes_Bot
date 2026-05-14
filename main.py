@@ -7,8 +7,6 @@ from telegram.ext import (
     filters
 )
 
-DELETE = 1
-
 from config import BOT_TOKEN
 from handlers.start import start
 from handlers.id import get_id
@@ -123,6 +121,8 @@ order_handler = ConversationHandler(
 
     fallbacks=[]
 )
+
+DELETE = 1
 
 delete_handler = ConversationHandler(
     entry_points=[
