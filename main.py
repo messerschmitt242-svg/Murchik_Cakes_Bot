@@ -16,6 +16,7 @@ from handlers.products import show_products
 from handlers.delete_product import delete_product, confirm_delete
 from handlers.add_product import finish_add
 from handlers.catalog import catalog
+from handlers.contacts import contacts
 from handlers.add_product import (
     add_product_start,
     add_photo,
@@ -47,6 +48,10 @@ app.add_handler(CommandHandler("delete_product", delete_product))
 
 app.add_handler(
     CallbackQueryHandler(finish_add, pattern="finish_add")
+)
+
+app.add_handler(
+    MessageHandler(filters.Regex("📍 Контакти"), contacts)
 )
 
 app.add_handler(
