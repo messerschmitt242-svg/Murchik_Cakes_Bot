@@ -14,7 +14,8 @@ from database.db import get_conn
 from config import ADMIN_ID
 
 
-PHOTO, NAME = range(2)
+ADD_PHOTO = 100
+ADD_NAME = 101
 
 
 # =========================
@@ -34,7 +35,7 @@ async def add_product_start(
         "Надішліть фото товару 🍰"
     )
 
-    return PHOTO
+    return ADD_PHOTO
 
 
 # =========================
@@ -51,7 +52,7 @@ async def add_photo(
             "❌ Надішліть саме фото"
         )
 
-        return PHOTO
+        return ADD_PHOTO
 
     photo = update.message.photo[-1].file_id
 
@@ -71,7 +72,7 @@ async def add_photo(
         reply_markup=keyboard
     )
 
-    return PHOTO
+    return ADD_PHOTO
 
 
 # =========================
@@ -92,7 +93,7 @@ async def finish_add(
         "Тепер напишіть назву товару:"
     )
 
-    return NAME
+    return ADD_NAME
 
 
 # =========================
