@@ -11,6 +11,8 @@ from handlers.start import start
 from handlers.id import get_id
 from handlers.catalog import catalog
 from handlers.faq import faq
+from handlers.products import show_cakes
+from handlers.catalog import catalog
 
 from handlers.order import (
     order_start,
@@ -44,6 +46,13 @@ app.add_handler(
     MessageHandler(
         filters.Regex("🍰 Каталог"),
         catalog
+    )
+)
+
+app.add_handler(
+    MessageHandler(
+        filters.Regex("🍰 Торти|🍮 Тістечка"),
+        show_cakes
     )
 )
 
