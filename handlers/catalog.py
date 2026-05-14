@@ -1,18 +1,12 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from keyboards.catalog_menu import catalog_menu
+
 
 async def catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    text = """
-🍰 Наш каталог
-
-🎂 Торти
-від 70 zł
-
-🍮Тістечка
-от 50 zł
-
-"""
-
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        "Оберіть категорію 🍰",
+        reply_markup=catalog_menu
+    )
