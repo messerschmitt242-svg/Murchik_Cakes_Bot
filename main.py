@@ -10,6 +10,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from handlers.start import start
 from handlers.id import get_id
+from database.cart_db import add_to_cart_db
 from handlers.catalog import catalog
 from handlers.faq import faq
 from handlers.products import show_products
@@ -18,7 +19,6 @@ from handlers.add_product import finish_add
 from handlers.catalog import catalog
 from handlers.admin_orders import list_orders, set_status
 from handlers.cart import (
-    add_to_cart,
     show_cart,
     plus_item,
     minus_item,
