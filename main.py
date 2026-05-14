@@ -12,6 +12,7 @@ from handlers.id import get_id
 from handlers.catalog import catalog
 from handlers.faq import faq
 from handlers.products import show_products
+from handlers.delete_product import delete_product, confirm_delete
 from handlers.catalog import catalog
 from handlers.add_product import (
     add_product_start,
@@ -39,6 +40,8 @@ init_db()
 app = Application.builder().token(
     BOT_TOKEN
 ).build()
+
+app.add_handler(CommandHandler("delete_product", delete_product))
 
 app.add_handler(
     CommandHandler(
@@ -121,6 +124,8 @@ add_product_handler = ConversationHandler(
 )
 
 app.add_handler(add_product_handler)
+
+app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
 
 print("Bot started")
 
