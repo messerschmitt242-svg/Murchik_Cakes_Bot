@@ -1,7 +1,9 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, CommandHandler, filters
 
-from database.temp_storage import PRODUCTS
+import sqlite3
+import json
+from database.db import get_conn
 
 PHOTO, NAME = range(2)
 
@@ -45,18 +47,26 @@ async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.message.text
     photos = context.user_data.get("photos", [])
 
-    if "cakes" not in PRODUCTS:
-        PRODUCTS["cakes"] = []
+    conn = get_conn()
+    cursor = conn.cursor()
 
-    PRODUCTS["cakes"].append({
-        "name": name,
-        "price": "—",
-        "desc": "Добавлено через бота",
-        "photos": photos
-    })
+    cursor.execute("""
+        INSERT INTO products (name, price, description, photos)
+        VALUES (?, ?, ?, ?)
+    """, (
+        name,
+        "—",
+        "Добавлено через бота",
+        json.dumps(photos)
+    ))
+
+    conn.commit()
+    conn.close()
 
     await update.message.reply_text(
-        f"✅ Товар добавлен:\n{name}\nФото: {len(photos)} шт."
+        f"✅ Товар сохранён в базе:\n{name}"
     )
+
+    return ConversationHandler.END
 
     return ConversationHandler.END
