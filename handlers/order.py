@@ -1,7 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (ContextTypes,ConversationHandler,MessageHandler,filters)
+from keyboards.main_menu import main_menu
 from config import ADMIN_ID
-
 from config import ADMIN_ID
 
 
@@ -87,7 +87,8 @@ async def get_cake(
     )
 
     await update.message.reply_text(
-        "Дякуємо ❤️ Заявка відправлена"
+        "Дякуємо ❤️ Заявка відправлена",
+        reply_markup=main_menu
     )
 
     return ConversationHandler.END
