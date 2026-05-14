@@ -46,6 +46,8 @@ async def finish_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Теперь напиши название товара:"
     )
 
+    print("FINISH ADD CALLED")
+
     return NAME
 
 async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
