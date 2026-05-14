@@ -33,8 +33,8 @@ from handlers.add_product import (
     add_product_start,
     add_photo,
     add_name,
-    PHOTO,
-    NAME
+    ADD_PHOTO,
+    ADD_NAME
 )
 
 
@@ -63,7 +63,7 @@ add_product_handler = ConversationHandler(
 
     states={
 
-        PHOTO: [
+        ADD_PHOTO: [
             MessageHandler(
                 filters.PHOTO,
                 add_photo
@@ -75,7 +75,7 @@ add_product_handler = ConversationHandler(
             )
         ],
 
-        NAME: [
+        ADD_NAME: [
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND,
                 add_name
