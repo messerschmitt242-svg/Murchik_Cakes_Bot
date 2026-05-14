@@ -165,7 +165,9 @@ add_product_handler = ConversationHandler(
         ],
     },
 
-    fallbacks=[]
+    fallbacks=[],
+
+    allow_reentry=True
 )
 
 app.add_handler(add_product_handler)
