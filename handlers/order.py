@@ -1,10 +1,6 @@
-from telegram import Update
-from telegram.ext import (
-    ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-    filters
-)
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import (ContextTypes,ConversationHandler,MessageHandler,filters)
+from config import ADMIN_ID
 
 from config import ADMIN_ID
 
@@ -26,29 +22,38 @@ async def order_start(
     return NAME
 
 
-async def get_name(
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE
-):
+async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["name"] = update.message.text
 
+    keyboard = ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("📱 Отправить номер", request_contact=True)]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
     await update.message.reply_text(
-        "Телефон:"
+        "Отправьте ваш номер телефона:",
+        reply_markup=keyboard
     )
 
     return PHONE
 
 
-async def get_phone(
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE
-):
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    context.user_data["phone"] = update.message.text
+    if update.message.contact:
+        phone = update.message.contact.phone_number
+    else:
+        phone = update.message.text
+
+    context.user_data["phone"] = phone
 
     await update.message.reply_text(
-        "Що бажаєте замовити?"
+        "Что хотите заказать?",
+        reply_markup=None
     )
 
     return CAKE
