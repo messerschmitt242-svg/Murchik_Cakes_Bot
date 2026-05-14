@@ -26,7 +26,7 @@ from handlers.cart import (
     checkout,
     save_order
 )
-from telegram.ext import CallbackQueryHandler, MessageHandler, filters
+
 from handlers.my_orders import my_orders
 from handlers.contacts import contacts
 from handlers.add_product import (
@@ -126,8 +126,7 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("id", get_id))
 
 app.add_handler(add_product_handler)
-app.add_handler(CommandHandler("delete_product", delete_product))
-app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
+app.add_handler(order_handler)
 
 app.add_handler(CallbackQueryHandler(add_to_cart, pattern="add_"))
 app.add_handler(CallbackQueryHandler(plus_item, pattern="plus_"))
@@ -135,22 +134,16 @@ app.add_handler(CallbackQueryHandler(minus_item, pattern="minus_"))
 app.add_handler(CallbackQueryHandler(delete_item, pattern="del_"))
 app.add_handler(CallbackQueryHandler(checkout, pattern="checkout"))
 
-app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
+app.add_handler(CommandHandler("delete_product", delete_product))
 
 app.add_handler(CommandHandler("orders", list_orders))
 app.add_handler(CommandHandler("set_status", set_status))
 
-app.add_handler(MessageHandler(filters.Regex("📦 Мої замовлення"), my_orders))
-
-app.add_handler(CallbackQueryHandler(finish_add, pattern="finish_add"))
-
-app.add_handler(MessageHandler(filters.Regex("📍 Контакти"), contacts))
-
 app.add_handler(MessageHandler(filters.Regex("🍰 Каталог"), show_products))
-
+app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
+app.add_handler(MessageHandler(filters.Regex("📦 Мої замовлення"), my_orders))
 app.add_handler(MessageHandler(filters.Regex("❓ FAQ"), faq))
-
-app.add_handler(order_handler)
+app.add_handler(MessageHandler(filters.Regex("📍 Контакти"), contacts))
 
 print("Bot started")
 
