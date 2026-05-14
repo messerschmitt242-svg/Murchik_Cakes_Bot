@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 from database.products_db import get_all_products
 from keyboards.main_menu import main_menu
 
+
 async def show_products(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
@@ -13,7 +14,8 @@ async def show_products(
 
     if not products:
         await update.message.reply_text(
-            "Каталог пуст 🍰"
+            "Каталог пустий 🍰",
+            reply_markup=main_menu
         )
         return
 
@@ -29,13 +31,11 @@ async def show_products(
 
         if photos:
 
-            # первая фотка с текстом
             await update.message.reply_photo(
                 photo=photos[0],
                 caption=caption
             )
 
-            # остальные фотки
             for ph in photos[1:]:
                 await update.message.reply_photo(
                     photo=ph
@@ -45,8 +45,8 @@ async def show_products(
             await update.message.reply_text(
                 caption
             )
-            
-await update.message.reply_text(
-    "Вы вернулись в главное меню 🍰",
-    reply_markup=main_menu
-)
+
+    await update.message.reply_text(
+        "Главное меню 🍰",
+        reply_markup=main_menu
+    )
