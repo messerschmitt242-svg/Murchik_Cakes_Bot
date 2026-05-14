@@ -12,7 +12,7 @@ async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["photos"] = []
 
     await update.message.reply_text(
-        "Отправляй фото товара 🍰\n\nКогда закончишь — напиши: ГОТОВО"
+        "Надсилайте фото товару 🍰\n\nКоли закінчите — напишіть: ГОТОВО"
     )
 
     return PHOTO
@@ -36,8 +36,8 @@ async def add_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["photos"].append(photo)
 
         await update.message.reply_text(
-            f"Фото добавлено ✅ ({len(context.user_data['photos'])})\n"
-            "Можешь отправить ещё или написать ГОТОВО"
+            f"Фото додано ✅ ({len(context.user_data['photos'])})\n"
+            "Можеш надіслати ще або написати ГОТОВО"
         )
 
     return PHOTO
@@ -56,7 +56,7 @@ async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """, (
         name,
         "—",
-        "Добавлено через бота",
+        "Додано через бота",
         json.dumps(photos)
     ))
 
@@ -64,7 +64,7 @@ async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     await update.message.reply_text(
-        f"✅ Товар сохранён в базе:\n{name}"
+        f"✅ Товар збережено у базі:\n{name}"
     )
 
     return ConversationHandler.END
