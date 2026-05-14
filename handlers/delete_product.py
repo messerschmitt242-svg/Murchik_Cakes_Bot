@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from config import ADMIN_ID
+from config import is_admin
 from database.products_db import get_all_products, delete_product_by_id
 
 
@@ -34,7 +34,7 @@ async def delete_product_callback(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != ADMIN_ID:
+    if query.from_user.id != is_admin():
         return
 
     product_id = int(query.data.split("_")[-1])
