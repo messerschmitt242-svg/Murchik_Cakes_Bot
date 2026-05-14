@@ -31,6 +31,10 @@ from handlers.order import (
     CAKE
 )
 
+from database.db import init_db
+
+init_db()
+
 app = Application.builder().token(
     BOT_TOKEN
 ).build()
