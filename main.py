@@ -47,6 +47,9 @@ app = Application.builder().token(
 
 app.add_handler(CommandHandler("delete_product", delete_product))
 
+app.add_handler(CommandHandler("orders", list_orders))
+app.add_handler(CommandHandler("set_status", set_status))
+
 app.add_handler(
     MessageHandler(filters.Regex("📦 Мої замовлення"), my_orders)
 )
