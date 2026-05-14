@@ -2,7 +2,7 @@ from telegram import ReplyKeyboardMarkup
 
 main_menu = ReplyKeyboardMarkup(
     [
-        ["🍰 Каталог", "🎂 Замовити"],
+        ["🍰 Каталог", "🛒 Кошик"],
         ["📦 Мої замовлення"],
         ["❓ FAQ", "📍 Контакти"]
     ],
