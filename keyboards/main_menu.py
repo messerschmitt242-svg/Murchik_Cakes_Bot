@@ -10,8 +10,10 @@ def get_main_menu(user_id: int | None = None):
         ["❓ FAQ", "📍 Контакти"],
     ]
 
+    # Адмінське меню бачить тільки власник бота
     if ADMIN_ID and user_id == ADMIN_ID:
-        rows.insert(2, ["📋 Активні замовлення"])
+        rows.insert(2, ["📋 Активні замовлення", "🎟 Промокоди"])
+        rows.insert(3, ["➕ Додати продукт", "🗑 Видалити продукт"])
 
     return ReplyKeyboardMarkup(
         rows,

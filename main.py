@@ -35,7 +35,6 @@ from handlers.promo import (
     promo_get_code,
     promo_choose_discount,
     promo_cancel,
-    promo_list,
     PROMO_CODE_INPUT,
     PROMO_DISCOUNT_SELECT,
 )
@@ -86,7 +85,9 @@ def build_app():
     app = Application.builder().token(BOT_TOKEN).build()
 
     add_product_handler = ConversationHandler(
-        entry_points=[CommandHandler("add", add_product_start)],
+        entry_points=[
+            MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start),
+        ],
         states={
             ADD_PHOTO: [
                 MessageHandler(filters.PHOTO, add_photo),
@@ -143,9 +144,10 @@ def build_app():
     app.add_handler(CommandHandler("id", get_id))
     app.add_handler(CommandHandler("orders", list_orders))
     app.add_handler(CommandHandler("set_status", set_status))
-    app.add_handler(CommandHandler("delete_product", delete_product))
-    app.add_handler(CommandHandler("promo", promo_menu))
-    app.add_handler(CommandHandler("promos", promo_list))
+
+    # Адмінські приховані кнопки головного меню
+    app.add_handler(MessageHandler(filters.Regex("^🗑 Видалити продукт$"), delete_product))
+    app.add_handler(MessageHandler(filters.Regex("^🎟 Промокоди$"), promo_menu))
 
     # Диалоги должны стоять выше обычных текстовых кнопок
     app.add_handler(add_product_handler)
