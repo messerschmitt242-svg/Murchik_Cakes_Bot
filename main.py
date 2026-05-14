@@ -50,11 +50,11 @@ from handlers.order import (
 
 from database.db import init_db
 
-init_db()
-
 app = Application.builder().token(
     BOT_TOKEN
 ).build()
+
+init_db()
 
 app.add_handler(CommandHandler("delete_product", delete_product))
 
