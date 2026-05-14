@@ -56,7 +56,9 @@ app = Application.builder().token(
 
 init_db()
 
+app.add_handler(add_product_handler)
 app.add_handler(CommandHandler("delete_product", delete_product))
+app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
 
 app.add_handler(CallbackQueryHandler(add_to_cart, pattern="add_"))
 app.add_handler(CallbackQueryHandler(plus_item, pattern="plus_"))
@@ -178,10 +180,6 @@ add_product_handler = ConversationHandler(
     fallbacks=[],
     allow_reentry=True
 )
-
-app.add_handler(add_product_handler)
-
-app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
 
 print("Bot started")
 
