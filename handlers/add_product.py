@@ -1,143 +1,135 @@
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup
-)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes, ConversationHandler
 
-from telegram.ext import (
-    ContextTypes,
-    ConversationHandler
-)
-
-import json
-from database.db import get_conn
 from config import ADMIN_ID
-
+from database.products_db import add_product
 
 ADD_PHOTO = 100
 ADD_NAME = 101
+ADD_PRICE = 102
+ADD_DESCRIPTION = 103
 
 
-# =========================
-# СТАРТ
-# =========================
-async def add_product_start(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+def _finish_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Завершити фото", callback_data="finish_add_photos")],
+        [InlineKeyboardButton("❌ Скасувати", callback_data="cancel_add_product")]
+    ])
 
+
+async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return ConversationHandler.END
 
-    context.user_data["photos"] = []
+    context.user_data["add_product"] = {
+        "photos": []
+    }
 
     await update.message.reply_text(
-        "Надішліть фото товару 🍰"
+        "Надішліть фото товару 🍰\n\nМожна надіслати декілька фото. Після останнього фото натисніть кнопку нижче.",
+        reply_markup=_finish_keyboard()
     )
 
     return ADD_PHOTO
 
 
-# =========================
-# ДОБАВЛЯЕМ ФОТО
-# =========================
-async def add_photo(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def add_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = context.user_data.setdefault("add_product", {"photos": []})
 
-    if not update.message.photo:
-
+    if not update.message or not update.message.photo:
         await update.message.reply_text(
-            "❌ Надішліть саме фото"
+            "❌ Надішліть саме фото товару.",
+            reply_markup=_finish_keyboard()
         )
-
         return ADD_PHOTO
 
-    photo = update.message.photo[-1].file_id
-
-    context.user_data["photos"].append(photo)
-
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "✅ Завершити додавання",
-                callback_data="finish_add"
-            )
-        ]
-    ])
+    photo_id = update.message.photo[-1].file_id
+    data["photos"].append(photo_id)
 
     await update.message.reply_text(
-        f"Фото додано ✅ ({len(context.user_data['photos'])})",
-        reply_markup=keyboard
+        f"Фото додано ✅ ({len(data['photos'])})",
+        reply_markup=_finish_keyboard()
     )
 
     return ADD_PHOTO
 
 
-# =========================
-# ГОТОВО
-# =========================
-async def finish_add(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    print("FINISH ADD CALLED")
-
+async def finish_add_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
     await query.answer()
 
-    await query.message.reply_text(
-        "Тепер напишіть назву товару:"
-    )
+    data = context.user_data.get("add_product", {"photos": []})
 
+    if not data.get("photos"):
+        await query.message.reply_text(
+            "Спочатку додайте хоча б одне фото.",
+            reply_markup=_finish_keyboard()
+        )
+        return ADD_PHOTO
+
+    await query.message.reply_text("Напишіть назву товару:")
     return ADD_NAME
 
 
-# =========================
-# СОХРАНЕНИЕ
-# =========================
-async def add_name(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = context.user_data.setdefault("add_product", {"photos": []})
+    data["name"] = update.message.text.strip()
 
-    print("NAME TRIGGERED")
+    if not data["name"]:
+        await update.message.reply_text("Назва не може бути порожньою. Напишіть назву товару:")
+        return ADD_NAME
 
-    name = update.message.text
+    await update.message.reply_text("Вкажіть ціну у zł, наприклад: 120 або 120.50")
+    return ADD_PRICE
 
-    photos = context.user_data.get(
-        "photos",
-        []
+
+async def add_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    raw_price = update.message.text.strip().replace(",", ".")
+
+    try:
+        price = float(raw_price)
+    except ValueError:
+        await update.message.reply_text("❌ Ціна має бути числом. Наприклад: 120 або 120.50")
+        return ADD_PRICE
+
+    data = context.user_data.setdefault("add_product", {"photos": []})
+    data["price"] = price
+
+    await update.message.reply_text("Напишіть опис товару:")
+    return ADD_DESCRIPTION
+
+
+async def add_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = context.user_data.get("add_product", {})
+
+    name = data.get("name")
+    price = data.get("price", 0)
+    description = update.message.text.strip()
+    photos = data.get("photos", [])
+
+    product_id = add_product(
+        name=name,
+        price=price,
+        description=description,
+        photos=photos,
     )
 
-    conn = get_conn()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO products
-        (name, price, description, photos)
-
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            name,
-            0,
-            "Додано через бота",
-            json.dumps(photos)
-        )
-    )
-
-    conn.commit()
-    conn.close()
+    context.user_data.pop("add_product", None)
 
     await update.message.reply_text(
-        f"✅ Товар збережено:\n{name}"
+        f"✅ Товар збережено у каталозі.\n\nID: {product_id}\nНазва: {name}\nЦіна: {price:.2f} zł"
     )
 
-    context.user_data.clear()
+    return ConversationHandler.END
 
+
+async def cancel_add_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        await query.message.reply_text("❌ Додавання товару скасовано.")
+    elif update.message:
+        await update.message.reply_text("❌ Додавання товару скасовано.")
+
+    context.user_data.pop("add_product", None)
     return ConversationHandler.END

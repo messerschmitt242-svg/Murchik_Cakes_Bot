@@ -1,8 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes    
+from telegram.ext import ContextTypes
+
 
 async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     text = """
 📍 Наші контакти
 
@@ -22,13 +22,17 @@ ul. Toruńska 45D, Bydgoszcz
                 "📍 Побудувати маршрут",
                 url="https://maps.app.goo.gl/7YLX42TMak4FdaXm9"
             )
+        ],
+        [
+            InlineKeyboardButton(
+                "💬 Написати в WhatsApp",
+                url="https://wa.me/48504690652"
+            )
         ]
     ])
 
-    chat_id = update.effective_chat.id
-
     await context.bot.send_message(
-        chat_id=chat_id,
+        chat_id=update.effective_chat.id,
         text=text,
         reply_markup=keyboard
     )
