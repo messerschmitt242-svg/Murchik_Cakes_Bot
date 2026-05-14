@@ -1,29 +1,47 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 
-from database.products import PRODUCTS
+from database.products_db import get_all_products
 
 
-async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_products(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
-    product = {
-        "name": "Сникерс",
-        "photos": ["file_id1", "file_id2"]
-    }
+    products = get_all_products()
 
-    caption = f"🍰 {product['name']}"
-
-    photos = product.get("photos", [])
-
-    # отправляем первую с текстом
-    if photos:
-        await update.message.reply_photo(
-            photo=photos[0],
-            caption=caption
+    if not products:
+        await update.message.reply_text(
+            "Каталог пуст 🍰"
         )
+        return
 
-        # остальные просто как фото
-        for p in photos[1:]:
-            await update.message.reply_photo(photo=p)
-    else:
-        await update.message.reply_text(caption)
+    for p in products:
+
+        caption = f"""
+🍰 {p['name']}
+💰 {p['price']}
+📝 {p['desc']}
+"""
+
+        photos = p.get("photos", [])
+
+        if photos:
+
+            # первая фотка с текстом
+            await update.message.reply_photo(
+                photo=photos[0],
+                caption=caption
+            )
+
+            # остальные фотки
+            for ph in photos[1:]:
+                await update.message.reply_photo(
+                    photo=ph
+                )
+
+        else:
+            await update.message.reply_text(
+                caption
+            )
