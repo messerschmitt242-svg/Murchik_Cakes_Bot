@@ -20,6 +20,7 @@ from handlers.add_product import (
     PHOTO,
     NAME
 )
+from handlers.products import show_products
 
 from handlers.order import (
     order_start,
@@ -56,7 +57,7 @@ app.add_handler(
 app.add_handler(
     MessageHandler(
         filters.Regex("🍰 Каталог"),
-        catalog
+        show_products
     )
 )
 
