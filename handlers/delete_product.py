@@ -6,7 +6,7 @@ from database.products_db import get_all_products, delete_product_by_id
 
 
 async def delete_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if not is_admin(update.effective_user.id):
         return
 
     products = get_all_products()
@@ -34,7 +34,7 @@ async def delete_product_callback(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != is_admin():
+    if not is_admin(query.from_user.id):
         return
 
     product_id = int(query.data.split("_")[-1])

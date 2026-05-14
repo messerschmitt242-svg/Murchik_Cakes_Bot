@@ -23,7 +23,7 @@ def _discount_keyboard():
 
 
 async def promo_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != is_admin():
+    if not is_admin(update.effective_user.id):
         return
 
     await update.message.reply_text(
@@ -36,7 +36,7 @@ async def promo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != is_admin():
+    if not is_admin(query.from_user.id):
         return ConversationHandler.END
 
     await query.message.reply_text(
@@ -65,7 +65,7 @@ async def promo_choose_discount(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != is_admin():
+    if not is_admin(query.from_user.id):
         return ConversationHandler.END
 
     discount = int(query.data.split("_")[-1])
@@ -97,7 +97,7 @@ async def promo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def promo_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != is_admin():
+    if not is_admin(update.effective_user.id):
         return
 
     promos = get_all_promos()

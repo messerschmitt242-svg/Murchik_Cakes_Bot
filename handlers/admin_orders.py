@@ -14,7 +14,7 @@ from database.orders_db import (
 
 
 async def list_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != is_admin():
+    if not is_admin(update.effective_user.id):
         return
 
     orders = get_all_orders()
@@ -42,7 +42,7 @@ ID: {order['id']}
 
 
 async def set_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != is_admin():
+    if not is_admin(update.effective_user.id):
         return
 
     if len(context.args) < 2:
@@ -82,7 +82,7 @@ def _active_orders_keyboard(orders):
 
 
 async def active_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != is_admin():
+    if not is_admin(update.effective_user.id):
         await update.message.reply_text("Цей розділ доступний тільки адміністратору.")
         return
 
@@ -101,7 +101,7 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != is_admin():
+    if not is_admin(query.from_user.id):
         await query.message.reply_text("Недоступно.")
         return
 
@@ -139,7 +139,7 @@ async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != ADMIN_ID:
+    if not is_admin(query.from_user.id):
         await query.message.reply_text("Недоступно.")
         return
 

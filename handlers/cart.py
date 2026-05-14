@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes, ConversationHandler
 
-from config import ADMIN_ID
+from config import ADMIN_IDS
 from database.cart_db import (
     add_to_cart_db,
     get_cart_items_db,
@@ -223,9 +223,9 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
 Статус: Прийнято
 """
 
-    if ADMIN_ID:
+    for admin_id in ADMIN_IDS:
         await context.bot.send_message(
-            chat_id=ADMIN_ID,
+            chat_id=admin_id,
             text=admin_text,
         )
 

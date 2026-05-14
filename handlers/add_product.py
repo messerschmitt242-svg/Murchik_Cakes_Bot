@@ -27,7 +27,7 @@ def _category_keyboard():
 
 
 async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != is_admin():
+    if not is_admin(update.effective_user.id):
         return ConversationHandler.END
 
     context.user_data["add_product"] = {"photos": []}
