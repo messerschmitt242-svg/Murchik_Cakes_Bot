@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
-from config import ADMIN_ID
+from config import is_admin
 from database.products_db import add_product, CATEGORIES
 
 ADD_PHOTO = 100
@@ -27,7 +27,7 @@ def _category_keyboard():
 
 
 async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id != is_admin():
         return ConversationHandler.END
 
     context.user_data["add_product"] = {"photos": []}
