@@ -47,6 +47,6 @@ async def show_products(
             )
 
     await update.message.reply_text(
-        "Главное меню 🍰",
+        "Головне меню 🍰",
         reply_markup=main_menu
     )
