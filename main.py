@@ -11,7 +11,7 @@ from handlers.start import start
 from handlers.id import get_id
 from handlers.catalog import catalog
 from handlers.faq import faq
-from handlers.products import show_cakes
+from handlers.products import show_products
 from handlers.catalog import catalog
 from handlers.add_product import (
     add_product_start,
@@ -20,7 +20,7 @@ from handlers.add_product import (
     PHOTO,
     NAME
 )
-from handlers.products import show_products
+
 
 from handlers.order import (
     order_start,
