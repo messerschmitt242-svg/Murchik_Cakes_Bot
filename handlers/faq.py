@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-
+from keyboards.main_menu import main_menu
 
 async def faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -18,4 +18,7 @@ async def faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 """
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+    text,
+    reply_markup=main_menu
+)
