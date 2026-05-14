@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
-from config import ADMIN_ID
+from config import is_admin
 from database.promo_db import create_promo, get_all_promos
 
 PROMO_CODE_INPUT = 300
@@ -23,7 +23,7 @@ def _discount_keyboard():
 
 
 async def promo_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id != is_admin():
         return
 
     await update.message.reply_text(
@@ -36,7 +36,7 @@ async def promo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != ADMIN_ID:
+    if query.from_user.id != is_admin():
         return ConversationHandler.END
 
     await query.message.reply_text(
@@ -65,7 +65,7 @@ async def promo_choose_discount(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != ADMIN_ID:
+    if query.from_user.id != is_admin():
         return ConversationHandler.END
 
     discount = int(query.data.split("_")[-1])
@@ -97,7 +97,7 @@ async def promo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def promo_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id != is_admin():
         return
 
     promos = get_all_promos()
