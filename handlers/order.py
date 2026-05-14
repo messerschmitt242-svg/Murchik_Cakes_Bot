@@ -28,14 +28,14 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = ReplyKeyboardMarkup(
         [
-            [KeyboardButton("📱 Отправить номер", request_contact=True)]
+            [KeyboardButton("📱 Надіслати номер", request_contact=True)]
         ],
         resize_keyboard=True,
         one_time_keyboard=True
     )
 
     await update.message.reply_text(
-        "Отправьте ваш номер телефона:",
+        "Надішліть ваш номер телефону:",
         reply_markup=keyboard
     )
 
@@ -55,7 +55,7 @@ async def get_phone(
     context.user_data["phone"] = phone
 
     await update.message.reply_text(
-        "Что хотите заказать?"
+        "Що бажаєте замовити?"
     )
 
     return CAKE
