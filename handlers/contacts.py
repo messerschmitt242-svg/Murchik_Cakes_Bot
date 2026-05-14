@@ -1,7 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-
-print("CONTACTS TRIGGERED")
+from telegram.ext import ContextTypes    
 
 async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -33,7 +31,10 @@ ul. Toruńska 45D, Bydgoszcz
         ]
     ])
 
-    await update.message.reply_text(
-        text,
+    chat_id = update.effective_chat.id
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
         reply_markup=keyboard
     )
