@@ -22,12 +22,6 @@ ul. Toruńska 45D, Bydgoszcz
                 "📍 Побудувати маршрут",
                 url="https://maps.app.goo.gl/h3XoRor8GWZucXFj8"
             )
-        ],
-        [
-            InlineKeyboardButton(
-                "📞 Зателефонувати",
-                url="tel:+48504690652"
-            )
         ]
     ])
 
