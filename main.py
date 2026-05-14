@@ -63,8 +63,8 @@ app.add_handler(
 
 app.add_handler(
     MessageHandler(
-        filters.Regex("🍰 Торти|🍮 Тістечка"),
-        show_cakes
+        filters.Regex("🍰 Каталог"),
+        show_products
     )
 )
 
