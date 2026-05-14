@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from database.products_db import get_all_products
-
+from keyboards.main_menu import main_menu
 
 async def show_products(
     update: Update,
@@ -45,3 +45,8 @@ async def show_products(
             await update.message.reply_text(
                 caption
             )
+            
+await update.message.reply_text(
+    "Вы вернулись в главное меню 🍰",
+    reply_markup=main_menu
+)
