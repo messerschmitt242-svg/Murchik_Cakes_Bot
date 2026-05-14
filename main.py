@@ -92,9 +92,9 @@ order_handler = ConversationHandler(
             )
         ],
 
-        PHONE:[
+        PHONE: [
             MessageHandler(
-                filters.TEXT,
+                filters.CONTACT | filters.TEXT,
                 get_phone
             )
         ],
