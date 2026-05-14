@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, CommandHandler, filters
 
 import sqlite3
@@ -11,36 +11,38 @@ async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["photos"] = []
 
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Завершити додавання", callback_data="finish_add")]
+    ])
+
     await update.message.reply_text(
-        "Надсилайте фото товару 🍰\n\nКоли закінчите — напишіть: ГОТОВО"
+        "Надішліть фото товару 🍰\n\nКоли закінчиш — натисни кнопку:",
+        reply_markup=keyboard
     )
 
     return PHOTO
 
 async def add_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    text = update.message.text
+    photo = update.message.photo[-1].file_id
+    context.user_data["photos"].append(photo)
 
-    # если админ закончил
-    if update.message.text and update.message.text.strip().upper() == "ГОТОВО":
-        await update.message.reply_text(
-            "Теперь напиши название товара:"
-        )
-        return NAME
-
-    # если фото
-    if update.message.photo:
-
-        photo = update.message.photo[-1].file_id
-
-        context.user_data["photos"].append(photo)
-
-        await update.message.reply_text(
-            f"Фото додано ✅ ({len(context.user_data['photos'])})\n"
-            "Можеш надіслати ще або написати ГОТОВО"
-        )
+    await update.message.reply_text(
+        f"Фото додано ✅ ({len(context.user_data['photos'])})"
+    )
 
     return PHOTO
+
+async def finish_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    query = update.callback_query
+    await query.answer()
+
+    await query.message.reply_text(
+        "Теперь напиши название товара:"
+    )
+
+    return NAME
 
 async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
