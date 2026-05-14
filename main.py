@@ -26,7 +26,9 @@ from handlers.admin_orders import (
     set_status,
     active_orders,
     show_admin_order,
+    show_admin_custom_order,
     advance_order_status,
+    advance_custom_order_status,
 )
 from handlers.delete_product import delete_product, delete_product_callback
 from handlers.promo import (
@@ -80,10 +82,19 @@ from handlers.favorites import (
 
 from handlers.reviews import (
     review_start,
+    reviews_view,
+    reviews_leave,
+    review_type_bakery,
+    review_type_product,
+    review_choose_product,
     review_get_text,
     review_choose_rating,
     review_cancel,
     show_reviews_admin,
+    show_product_reviews,
+    REVIEW_MENU,
+    REVIEW_TYPE,
+    REVIEW_PRODUCT,
     REVIEW_TEXT,
     REVIEW_RATING,
 )
@@ -92,6 +103,8 @@ from handlers.custom_order import (
     custom_order_start,
     custom_get_name,
     custom_get_phone,
+    custom_choose_category,
+    custom_choose_product,
     custom_get_description,
     custom_get_date,
     custom_get_photo,
@@ -99,6 +112,8 @@ from handlers.custom_order import (
     custom_cancel,
     CUSTOM_NAME,
     CUSTOM_PHONE,
+    CUSTOM_CATEGORY,
+    CUSTOM_PRODUCT,
     CUSTOM_DESCRIPTION,
     CUSTOM_DATE,
     CUSTOM_PHOTO,
@@ -176,6 +191,17 @@ def build_app():
             MessageHandler(filters.Regex("^💬 Відгуки$"), review_start),
         ],
         states={
+            REVIEW_MENU: [
+                CallbackQueryHandler(reviews_view, pattern="^reviews_view$"),
+                CallbackQueryHandler(reviews_leave, pattern="^reviews_leave$"),
+            ],
+            REVIEW_TYPE: [
+                CallbackQueryHandler(review_type_bakery, pattern="^review_type_bakery$"),
+                CallbackQueryHandler(review_type_product, pattern="^review_type_product$"),
+            ],
+            REVIEW_PRODUCT: [
+                CallbackQueryHandler(review_choose_product, pattern=r"^review_product_\d+$"),
+            ],
             REVIEW_TEXT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, review_get_text),
             ],
@@ -200,6 +226,13 @@ def build_app():
             ],
             CUSTOM_PHONE: [
                 MessageHandler(filters.CONTACT | (filters.TEXT & ~filters.COMMAND), custom_get_phone),
+            ],
+            CUSTOM_CATEGORY: [
+                CallbackQueryHandler(custom_choose_category, pattern="^custom_category_"),
+            ],
+            CUSTOM_PRODUCT: [
+                CallbackQueryHandler(custom_choose_product, pattern=r"^custom_product_\d+$"),
+                CallbackQueryHandler(custom_choose_category, pattern="^custom_back_categories$"),
             ],
             CUSTOM_DESCRIPTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, custom_get_description),
@@ -242,11 +275,14 @@ def build_app():
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^catalog_category_"))
     app.add_handler(CallbackQueryHandler(show_product_detail, pattern=r"^catalog_product_\d+$"))
     app.add_handler(CallbackQueryHandler(toggle_favorite, pattern=r"^favorite_\d+$"))
+    app.add_handler(CallbackQueryHandler(show_product_reviews, pattern=r"^product_reviews_\d+$"))
 
     # Inline-кнопки админки и удаления
     app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
     app.add_handler(CallbackQueryHandler(show_admin_order, pattern=r"^admin_order_\d+$"))
+    app.add_handler(CallbackQueryHandler(show_admin_custom_order, pattern=r"^admin_custom_order_\d+$"))
     app.add_handler(CallbackQueryHandler(advance_order_status, pattern=r"^admin_next_status_\d+$"))
+    app.add_handler(CallbackQueryHandler(advance_custom_order_status, pattern=r"^admin_next_custom_status_\d+$"))
 
     # Inline-кнопки корзины
     app.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_\d+$"))

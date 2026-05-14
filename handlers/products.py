@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMe
 from telegram.ext import ContextTypes
 
 from database.products_db import get_all_products, get_product, get_categories
+from database.reviews_db import get_product_rating_db
 from handlers.cleanup import delete_callback_message
 
 
@@ -95,10 +96,18 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
 
+    avg_rating, count_reviews = get_product_rating_db(product_id)
+
+    if count_reviews:
+        rating_line = f"⭐ Оцінка: {avg_rating:.1f}/5 ({count_reviews})"
+    else:
+        rating_line = "⭐ Оцінка: поки немає"
+
     caption = f"""
 🍰 {product['name']}
 
 💰 {product['price']:.2f} zł
+{rating_line}
 
 📝 {product['description']}
 """
@@ -106,6 +115,7 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🛒 Додати в кошик", callback_data=f"add_{product_id}")],
         [InlineKeyboardButton("❤️ Додати в обране", callback_data=f"favorite_{product_id}")],
+        [InlineKeyboardButton("💬 Подивитися відгуки", callback_data=f"product_reviews_{product_id}")],
         [InlineKeyboardButton("⬅️ Назад до категорії", callback_data=f"catalog_category_{product['category']}")],
     ])
 

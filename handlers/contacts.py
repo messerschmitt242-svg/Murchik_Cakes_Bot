@@ -22,12 +22,6 @@ ul. Toruńska 45D, Bydgoszcz
                 "📍 Побудувати маршрут",
                 url="https://maps.app.goo.gl/7YLX42TMak4FdaXm9"
             )
-        ],
-        [
-            InlineKeyboardButton(
-                "💬 Написати в WhatsApp",
-                url="https://wa.me/48504690652"
-            )
         ]
     ])
 

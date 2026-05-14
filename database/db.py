@@ -94,6 +94,9 @@ def init_db():
             name TEXT DEFAULT '',
             text TEXT NOT NULL,
             rating INTEGER DEFAULT 5,
+            review_type TEXT DEFAULT 'bakery',
+            product_id INTEGER DEFAULT NULL,
+            product_name TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -104,6 +107,8 @@ def init_db():
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             phone TEXT NOT NULL,
+            product_id INTEGER DEFAULT NULL,
+            product_name TEXT DEFAULT '',
             description TEXT NOT NULL,
             date TEXT DEFAULT '',
             photo TEXT DEFAULT '',
@@ -120,6 +125,11 @@ def init_db():
     _ensure_column(cursor, "orders", "items", "TEXT DEFAULT ''")
     _ensure_column(cursor, "orders", "total", "REAL DEFAULT 0")
     _ensure_column(cursor, "orders", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
+    _ensure_column(cursor, "reviews", "review_type", "TEXT DEFAULT 'bakery'")
+    _ensure_column(cursor, "reviews", "product_id", "INTEGER DEFAULT NULL")
+    _ensure_column(cursor, "reviews", "product_name", "TEXT DEFAULT ''")
+    _ensure_column(cursor, "custom_orders", "product_id", "INTEGER DEFAULT NULL")
+    _ensure_column(cursor, "custom_orders", "product_name", "TEXT DEFAULT ''")
 
     conn.commit()
     conn.close()
