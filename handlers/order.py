@@ -2,7 +2,6 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (ContextTypes,ConversationHandler,MessageHandler,filters)
 from keyboards.main_menu import main_menu
 from config import ADMIN_ID
-from config import ADMIN_ID
 from database.db import get_conn
 
 NAME = 1
@@ -61,13 +60,31 @@ async def get_phone(
     return CAKE
 
 
-async def get_cake(
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE
-):
+async def get_cake(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    from database.db import get_conn
 
     context.user_data["cake"] = update.message.text
 
+    # 1. сохраняем в БД
+    conn = get_conn()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO orders (user_id, name, phone, product, status)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        update.effective_user.id,
+        context.user_data["name"],
+        context.user_data["phone"],
+        context.user_data["cake"],
+        "Прийнято"
+    ))
+
+    conn.commit()
+    conn.close()
+
+    # 2. сообщение админу
     text = f"""
 Нове замовлення 🎂
 
@@ -86,26 +103,10 @@ async def get_cake(
         text=text
     )
 
+    # 3. ответ пользователю
     await update.message.reply_text(
         "Дякуємо ❤️ Заявка відправлена",
         reply_markup=main_menu
     )
 
     return ConversationHandler.END
-
-conn = get_conn()
-cursor = conn.cursor()
-
-cursor.execute("""
-    INSERT INTO orders (user_id, name, phone, product, status)
-    VALUES (?, ?, ?, ?, ?)
-""", (
-    update.effective_user.id,
-    context.user_data["name"],
-    context.user_data["phone"],
-    context.user_data["cake"],
-    "Прийнято"
-))
-
-conn.commit()
-conn.close()
