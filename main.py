@@ -7,6 +7,8 @@ from telegram.ext import (
     filters
 )
 
+DELETE = 1
+
 from config import BOT_TOKEN
 from handlers.start import start
 from handlers.id import get_id
