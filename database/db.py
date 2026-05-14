@@ -1,10 +1,9 @@
 import sqlite3
 
-DB_PATH = "data.db"
+DB_PATH = "/data/data.db"
 
 def get_conn():
     return sqlite3.connect(DB_PATH)
-DB_NAME = "bot.db"
 
 ddef init_db():
     conn = get_conn()
