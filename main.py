@@ -63,13 +63,6 @@ app.add_handler(
 
 app.add_handler(
     MessageHandler(
-        filters.Regex("🍰 Каталог"),
-        show_products
-    )
-)
-
-app.add_handler(
-    MessageHandler(
         filters.Regex("❓ FAQ"),
         faq
     )
