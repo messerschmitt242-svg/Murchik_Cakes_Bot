@@ -17,6 +17,7 @@ from handlers.delete_product import delete_product, confirm_delete
 from handlers.add_product import finish_add
 from handlers.catalog import catalog
 from handlers.admin_orders import list_orders, set_status
+from handlers.cart import add_to_cart
 from handlers.my_orders import my_orders
 from handlers.contacts import contacts
 from handlers.add_product import (
@@ -47,6 +48,8 @@ app = Application.builder().token(
 ).build()
 
 app.add_handler(CommandHandler("delete_product", delete_product))
+
+app.add_handler(CallbackQueryHandler(add_to_cart, pattern="add_"))
 
 app.add_handler(CommandHandler("orders", list_orders))
 app.add_handler(CommandHandler("set_status", set_status))
