@@ -122,6 +122,18 @@ order_handler = ConversationHandler(
     fallbacks=[]
 )
 
+delete_handler = ConversationHandler(
+    entry_points=[
+        CommandHandler("delete_product", delete_product)
+    ],
+    states={
+        DELETE: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_delete)
+        ]
+    },
+    fallbacks=[]
+)
+
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("id", get_id))
 
