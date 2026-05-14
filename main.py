@@ -152,12 +152,19 @@ add_product_handler = ConversationHandler(
     entry_points=[
         CommandHandler("add", add_product_start)
     ],
+
     states={
+
         PHOTO: [
-            MessageHandler(filters.PHOTO | filters.TEXT, add_photo)
+            MessageHandler(filters.PHOTO, add_photo),
+            CallbackQueryHandler(finish_add, pattern="finish_add")
         ],
-        NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)]
+
+        NAME: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)
+        ],
     },
+
     fallbacks=[]
 )
 
