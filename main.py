@@ -14,10 +14,31 @@ from handlers.start import start
 from handlers.id import get_id
 from handlers.faq import faq
 from handlers.contacts import contacts
-from handlers.products import show_products
+from handlers.products import (
+    show_products,
+    show_category_products,
+    show_product_detail,
+    catalog_back,
+)
 from handlers.my_orders import my_orders
-from handlers.admin_orders import list_orders, set_status
+from handlers.admin_orders import (
+    list_orders,
+    set_status,
+    active_orders,
+    show_admin_order,
+    advance_order_status,
+)
 from handlers.delete_product import delete_product, delete_product_callback
+from handlers.promo import (
+    promo_menu,
+    promo_start,
+    promo_get_code,
+    promo_choose_discount,
+    promo_cancel,
+    promo_list,
+    PROMO_CODE_INPUT,
+    PROMO_DISCOUNT_SELECT,
+)
 
 from handlers.add_product import (
     add_product_start,
@@ -26,11 +47,13 @@ from handlers.add_product import (
     add_name,
     add_price,
     add_description,
+    choose_category,
     cancel_add_product,
     ADD_PHOTO,
     ADD_NAME,
     ADD_PRICE,
     ADD_DESCRIPTION,
+    ADD_CATEGORY,
 )
 
 from handlers.cart import (
@@ -39,12 +62,16 @@ from handlers.cart import (
     plus_item,
     minus_item,
     delete_item,
+    promo_start as cart_promo_start,
+    promo_apply as cart_promo_apply,
+    promo_cancel as cart_promo_cancel,
     checkout_start,
     checkout_get_name,
     checkout_get_phone,
     checkout_cancel,
     CART_NAME,
     CART_PHONE,
+    PROMO_CODE,
 )
 
 
@@ -68,6 +95,7 @@ def build_app():
             ADD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)],
             ADD_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price)],
             ADD_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_description)],
+            ADD_CATEGORY: [CallbackQueryHandler(choose_category, pattern="^add_category_")],
         },
         fallbacks=[
             CommandHandler("cancel", cancel_add_product),
@@ -86,28 +114,66 @@ def build_app():
         allow_reentry=True,
     )
 
+    cart_promo_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(cart_promo_start, pattern=r"^cart_promo_\d+$")],
+        states={
+            PROMO_CODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, cart_promo_apply)],
+        },
+        fallbacks=[CommandHandler("cancel", cart_promo_cancel)],
+        allow_reentry=True,
+    )
+
+    promo_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(promo_start, pattern="^promo_create$")],
+        states={
+            PROMO_CODE_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, promo_get_code)],
+            PROMO_DISCOUNT_SELECT: [
+                CallbackQueryHandler(promo_choose_discount, pattern="^promo_discount_(10|20)$"),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", promo_cancel),
+            CallbackQueryHandler(promo_cancel, pattern="^promo_cancel$"),
+        ],
+        allow_reentry=True,
+    )
+
     # Команды
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("id", get_id))
     app.add_handler(CommandHandler("orders", list_orders))
     app.add_handler(CommandHandler("set_status", set_status))
     app.add_handler(CommandHandler("delete_product", delete_product))
+    app.add_handler(CommandHandler("promo", promo_menu))
+    app.add_handler(CommandHandler("promos", promo_list))
 
     # Диалоги должны стоять выше обычных текстовых кнопок
     app.add_handler(add_product_handler)
     app.add_handler(checkout_handler)
+    app.add_handler(cart_promo_handler)
+    app.add_handler(promo_handler)
 
-    # Inline-кнопки
-    app.add_handler(CallbackQueryHandler(delete_product_callback, pattern="^delete_product_\\d+$"))
-    app.add_handler(CallbackQueryHandler(add_to_cart, pattern="^add_\\d+$"))
-    app.add_handler(CallbackQueryHandler(plus_item, pattern="^cart_plus_\\d+$"))
-    app.add_handler(CallbackQueryHandler(minus_item, pattern="^cart_minus_\\d+$"))
-    app.add_handler(CallbackQueryHandler(delete_item, pattern="^cart_del_\\d+$"))
+    # Inline-кнопки каталога
+    app.add_handler(CallbackQueryHandler(catalog_back, pattern="^catalog_back$"))
+    app.add_handler(CallbackQueryHandler(show_category_products, pattern="^catalog_category_"))
+    app.add_handler(CallbackQueryHandler(show_product_detail, pattern=r"^catalog_product_\d+$"))
+
+    # Inline-кнопки админки и удаления
+    app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
+    app.add_handler(CallbackQueryHandler(show_admin_order, pattern=r"^admin_order_\d+$"))
+    app.add_handler(CallbackQueryHandler(advance_order_status, pattern=r"^admin_next_status_\d+$"))
+
+    # Inline-кнопки корзины
+    app.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_\d+$"))
+    app.add_handler(CallbackQueryHandler(plus_item, pattern=r"^cart_plus_\d+$"))
+    app.add_handler(CallbackQueryHandler(minus_item, pattern=r"^cart_minus_\d+$"))
+    app.add_handler(CallbackQueryHandler(delete_item, pattern=r"^cart_del_\d+$"))
 
     # Главное меню
     app.add_handler(MessageHandler(filters.Regex("^🍰 Каталог$"), show_products))
     app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
     app.add_handler(MessageHandler(filters.Regex("^📦 Мої замовлення$"), my_orders))
+    app.add_handler(MessageHandler(filters.Regex("^📋 Активні замовлення$"), active_orders))
     app.add_handler(MessageHandler(filters.Regex("^❓ FAQ$"), faq))
     app.add_handler(MessageHandler(filters.Regex("^📍 Контакти$"), contacts))
 

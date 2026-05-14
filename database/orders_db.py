@@ -1,21 +1,31 @@
 import json
 from database.db import get_conn
 
+STATUSES = [
+    "Прийнято",
+    "Готується",
+    "Готове до видачі",
+    "Завершено",
+]
+
 
 def create_order(user_id: int, name: str, phone: str, items: list[dict], total: float) -> int:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO orders (user_id, name, phone, items, total, status)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        user_id,
-        name,
-        phone,
-        json.dumps(items, ensure_ascii=False),
-        total,
-        "Прийнято",
-    ))
+        """,
+        (
+            user_id,
+            name,
+            phone,
+            json.dumps(items, ensure_ascii=False),
+            total,
+            "Прийнято",
+        ),
+    )
     conn.commit()
     order_id = cursor.lastrowid
     conn.close()
@@ -25,12 +35,15 @@ def create_order(user_id: int, name: str, phone: str, items: list[dict], total: 
 def get_user_orders(user_id: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, items, total, status, created_at
         FROM orders
         WHERE user_id = ?
         ORDER BY id DESC
-    """, (user_id,))
+        """,
+        (user_id,),
+    )
     rows = cursor.fetchall()
     conn.close()
     return rows
@@ -39,14 +52,48 @@ def get_user_orders(user_id: int):
 def get_all_orders():
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, user_id, name, phone, items, total, status, created_at
         FROM orders
         ORDER BY id DESC
-    """)
+        """
+    )
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def get_active_orders():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, user_id, name, phone, items, total, status, created_at
+        FROM orders
+        WHERE status != 'Завершено'
+        ORDER BY id DESC
+        """
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def get_order(order_id: int):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, user_id, name, phone, items, total, status, created_at
+        FROM orders
+        WHERE id = ?
+        """,
+        (order_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row
 
 
 def update_order_status(order_id: int, status: str) -> bool:
@@ -59,6 +106,16 @@ def update_order_status(order_id: int, status: str) -> bool:
     return changed
 
 
+def next_status(current_status: str):
+    if current_status == "Прийнято":
+        return "Готується", "👩‍🍳 Готується"
+    if current_status == "Готується":
+        return "Готове до видачі", "✅ Готове до видачі"
+    if current_status == "Готове до видачі":
+        return "Завершено", "🏁 Завершено"
+    return None, None
+
+
 def format_items(raw_items: str) -> str:
     try:
         items = json.loads(raw_items or "[]")
@@ -68,7 +125,10 @@ def format_items(raw_items: str) -> str:
     if not items:
         return "—"
 
-    return "\n".join(
-        f"• {item.get('name', 'Товар')} x{item.get('qty', 1)} — {item.get('subtotal', 0):.2f} zł"
-        for item in items
-    )
+    result = []
+    for item in items:
+        line = f"• {item.get('name', 'Товар')} x{item.get('qty', 1)} — {item.get('final_subtotal', item.get('subtotal', 0)):.2f} zł"
+        if item.get("promo_code"):
+            line += f"\n  промо: {item.get('promo_code')} (-{item.get('discount_percent', 0)}%)"
+        result.append(line)
+    return "\n".join(result)

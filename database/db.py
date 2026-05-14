@@ -40,6 +40,7 @@ def init_db():
             price REAL DEFAULT 0,
             description TEXT DEFAULT '',
             photos TEXT DEFAULT '[]',
+            category TEXT DEFAULT 'Торти',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -49,6 +50,8 @@ def init_db():
             user_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
             qty INTEGER NOT NULL DEFAULT 1,
+            promo_code TEXT DEFAULT '',
+            discount_percent INTEGER DEFAULT 0,
             PRIMARY KEY (user_id, product_id)
         )
     """)
@@ -66,8 +69,20 @@ def init_db():
         )
     """)
 
-    # мягкая миграция старых локальных БД, если таблица уже была создана иначе
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            code TEXT PRIMARY KEY,
+            discount_percent INTEGER NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Мягкая миграция старых БД, если таблицы уже были созданы иначе.
     _ensure_column(cursor, "products", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
+    _ensure_column(cursor, "products", "category", "TEXT DEFAULT 'Торти'")
+    _ensure_column(cursor, "cart", "promo_code", "TEXT DEFAULT ''")
+    _ensure_column(cursor, "cart", "discount_percent", "INTEGER DEFAULT 0")
     _ensure_column(cursor, "orders", "items", "TEXT DEFAULT ''")
     _ensure_column(cursor, "orders", "total", "REAL DEFAULT 0")
     _ensure_column(cursor, "orders", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
