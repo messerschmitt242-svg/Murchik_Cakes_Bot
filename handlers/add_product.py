@@ -22,7 +22,7 @@ async def add_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
     # если админ закончил
-    if text and text.upper() == "ГОТОВО":
+    if update.message.text and update.message.text.strip().upper() == "ГОТОВО":
         await update.message.reply_text(
             "Теперь напиши название товара:"
         )
