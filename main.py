@@ -8,12 +8,8 @@ from handlers.start import start
 
 app = Application.builder().token(BOT_TOKEN).build()
 
-app.add_handler(
-    CommandHandler(
-        "start",
-        start
-    )
-)
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("id", get_id))
 
 print("Bot started")
 
