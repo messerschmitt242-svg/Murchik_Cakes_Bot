@@ -3,6 +3,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     ConversationHandler,
+    CallbackQueryHandler,
     filters
 )
 
@@ -13,6 +14,7 @@ from handlers.catalog import catalog
 from handlers.faq import faq
 from handlers.products import show_products
 from handlers.delete_product import delete_product, confirm_delete
+from handlers.add_product import finish_add
 from handlers.catalog import catalog
 from handlers.add_product import (
     add_product_start,
@@ -42,6 +44,10 @@ app = Application.builder().token(
 ).build()
 
 app.add_handler(CommandHandler("delete_product", delete_product))
+
+app.add_handler(
+    CallbackQueryHandler(finish_add, pattern="finish_add")
+)
 
 app.add_handler(
     CommandHandler(
