@@ -51,7 +51,9 @@ async def finish_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return NAME
 
 async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
+    
+    print("NAME TRIGGERED")
+    
     name = update.message.text
     photos = context.user_data.get("photos", [])
 
