@@ -4,7 +4,7 @@ main_menu = ReplyKeyboardMarkup(
     [
         ["🍰 Каталог", "🛒 Кошик"],
         ["📦 Мої замовлення"],
-        ["❓ FAQ", "📍 Контакти"]
+        ["❓ FAQ", "📍 Контакти"],
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
 )
