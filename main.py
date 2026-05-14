@@ -13,6 +13,13 @@ from handlers.catalog import catalog
 from handlers.faq import faq
 from handlers.products import show_cakes
 from handlers.catalog import catalog
+from handlers.add_product import (
+    add_product_start,
+    add_photo,
+    add_name,
+    PHOTO,
+    NAME
+)
 
 from handlers.order import (
     order_start,
@@ -101,6 +108,19 @@ order_handler = ConversationHandler(
 app.add_handler(
     order_handler
 )
+
+add_product_handler = ConversationHandler(
+    entry_points=[
+        CommandHandler("add", add_product_start)
+    ],
+    states={
+        PHOTO: [MessageHandler(filters.PHOTO, add_photo)],
+        NAME: [MessageHandler(filters.TEXT, add_name)]
+    },
+    fallbacks=[]
+)
+
+app.add_handler(add_product_handler)
 
 print("Bot started")
 
