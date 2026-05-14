@@ -154,4 +154,11 @@ app.add_handler(order_handler)
 
 print("Bot started")
 
-app.run_polling()
+async def error_handler(update, context):
+    print("ERROR:")
+    print(context.error)
+
+app.add_error_handler(error_handler)
+
+if __name__ == "__main__":
+    app.run_polling()
