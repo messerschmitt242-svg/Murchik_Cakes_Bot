@@ -6,13 +6,15 @@ from config import is_admin
 def get_main_menu(user_id: int | None = None):
     rows = [
         ["🍰 Каталог", "🛒 Кошик"],
+        ["❤️ Обране", "💬 Відгуки"],
+        ["🎂 Індивідуальне замовлення"],
         ["📦 Мої замовлення"],
         ["❓ FAQ", "📍 Контакти"],
     ]
 
     if user_id is not None and is_admin(user_id):
-        rows.insert(2, ["📋 Активні замовлення", "🎟 Промокоди"])
-        rows.insert(3, ["➕ Додати продукт", "🗑 Видалити продукт"])
+        rows.insert(3, ["📋 Активні замовлення", "🎟 Промокоди"])
+        rows.insert(4, ["➕ Додати продукт", "🗑 Видалити продукт"])
 
     return ReplyKeyboardMarkup(
         rows,
