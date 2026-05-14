@@ -122,6 +122,9 @@ order_handler = ConversationHandler(
     fallbacks=[]
 )
 
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("id", get_id))
+
 app.add_handler(add_product_handler)
 app.add_handler(CommandHandler("delete_product", delete_product))
 app.add_handler(MessageHandler(filters.TEXT, confirm_delete))
@@ -142,10 +145,6 @@ app.add_handler(MessageHandler(filters.Regex("📦 Мої замовлення")
 app.add_handler(CallbackQueryHandler(finish_add, pattern="finish_add"))
 
 app.add_handler(MessageHandler(filters.Regex("📍 Контакти"), contacts))
-
-app.add_handler(CommandHandler("start", start))
-
-app.add_handler(CommandHandler("id", get_id))
 
 app.add_handler(MessageHandler(filters.Regex("🍰 Каталог"), show_products))
 
