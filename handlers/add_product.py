@@ -4,11 +4,15 @@ from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, Comm
 import sqlite3
 import json
 from database.db import get_conn
+from config import ADMIN_ID
 
 PHOTO, NAME = range(2)
 
 async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if update.effective_user.id != ADMIN_ID:
+        return
+        
     context.user_data["photos"] = []
 
     keyboard = InlineKeyboardMarkup([
