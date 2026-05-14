@@ -42,7 +42,10 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return PHONE
 
 
-async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def get_phone(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if update.message.contact:
         phone = update.message.contact.phone_number
@@ -52,8 +55,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["phone"] = phone
 
     await update.message.reply_text(
-        "Что хотите заказать?",
-        reply_markup=None
+        "Что хотите заказать?"
     )
 
     return CAKE
