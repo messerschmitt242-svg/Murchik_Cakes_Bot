@@ -112,7 +112,9 @@ add_product_handler = ConversationHandler(
         CommandHandler("add", add_product_start)
     ],
     states={
-        PHOTO: [MessageHandler(filters.PHOTO, add_photo)],
+        PHOTO: [
+            MessageHandler(filters.PHOTO | filters.TEXT, add_photo)
+        ],
         NAME: [MessageHandler(filters.TEXT, add_name)]
     },
     fallbacks=[]
