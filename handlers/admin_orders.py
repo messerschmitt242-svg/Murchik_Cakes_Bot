@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from config import ADMIN_ID
+from config import is_admin
 from database.orders_db import (
     STATUSES,
     get_all_orders,
@@ -14,7 +14,7 @@ from database.orders_db import (
 
 
 async def list_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id != is_admin():
         return
 
     orders = get_all_orders()
@@ -42,7 +42,7 @@ ID: {order['id']}
 
 
 async def set_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id != is_admin():
         return
 
     if len(context.args) < 2:
@@ -82,7 +82,7 @@ def _active_orders_keyboard(orders):
 
 
 async def active_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_user.id != is_admin():
         await update.message.reply_text("Цей розділ доступний тільки адміністратору.")
         return
 
@@ -101,7 +101,7 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.from_user.id != ADMIN_ID:
+    if query.from_user.id != is_admin():
         await query.message.reply_text("Недоступно.")
         return
 
