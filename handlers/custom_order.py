@@ -1,12 +1,12 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 
-from config import ADMIN_IDS
 from database.custom_orders_db import create_custom_order_db
 from database.products_db import get_all_products, get_product, get_categories
 from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
 from handlers.home import HOME_BUTTON_TEXT
+from handlers.admin_notify import notify_admins_text, notify_admins_photo, admin_contact_keyboard
 
 CUSTOM_NAME = 800
 CUSTOM_PHONE = 801
@@ -255,6 +255,8 @@ async def _save_custom_order(update: Update, context: ContextTypes.DEFAULT_TYPE,
 
     context.user_data.pop("custom_order", None)
 
+    chat_id = update.effective_chat.id
+
     text = f"""
 Нове індивідуальне замовлення C#{order_id} 🎂
 
@@ -267,24 +269,43 @@ async def _save_custom_order(update: Update, context: ContextTypes.DEFAULT_TYPE,
 {description}
 """
 
-    for admin_id in ADMIN_IDS:
-        if photo:
-            await context.bot.send_photo(
-                chat_id=admin_id,
-                photo=photo,
-                caption=text,
-            )
-        else:
-            await context.bot.send_message(
-                chat_id=admin_id,
-                text=text,
-            )
+    if photo:
+        admin_notified = await notify_admins_photo(
+            context=context,
+            photo=photo,
+            caption=text,
+        )
+    else:
+        admin_notified = await notify_admins_text(
+            context=context,
+            text=text,
+        )
 
-    chat_id = update.effective_chat.id
+    if admin_notified > 0:
+        confirmation_text = f"✅ Індивідуальне замовлення C#{order_id} прийнято. Ми скоро з вами зв'яжемося ❤️"
+    else:
+        confirmation_text = (
+            f"✅ Індивідуальне замовлення C#{order_id} створено.\n"
+            "Адміністратор може побачити його в панелі активних замовлень."
+        )
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"✅ Індивідуальне замовлення C#{order_id} прийнято. Ми скоро з вами зв'яжемося ❤️",
+        text=confirmation_text,
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    contact_keyboard = admin_contact_keyboard()
+    if contact_keyboard:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Потрібно уточнити деталі?",
+            reply_markup=contact_keyboard,
+        )
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="Головне меню 🍰",
         reply_markup=get_main_menu(user.id),
     )
 

@@ -1,7 +1,6 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 
-from config import ADMIN_IDS
 from database.cart_db import (
     add_to_cart_db,
     get_cart_items_db,
@@ -14,6 +13,7 @@ from database.orders_db import create_order
 from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
 from handlers.home import HOME_BUTTON_TEXT
+from handlers.admin_notify import notify_admins_text, admin_contact_keyboard
 
 CART_NAME = 200
 CART_PHONE = 201
@@ -244,14 +244,35 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
 Статус: Прийнято
 """
 
-    for admin_id in ADMIN_IDS:
-        await context.bot.send_message(
-            chat_id=admin_id,
-            text=admin_text,
+    admin_notified = await notify_admins_text(
+        context=context,
+        text=admin_text,
+    )
+
+    if admin_notified > 0:
+        confirmation_text = f"✅ Замовлення #{order_id} прийнято.\nМи скоро з вами зв'яжемося ❤️"
+    else:
+        confirmation_text = (
+            f"✅ Замовлення #{order_id} створено.\n"
+            "Адміністратор може побачити його в панелі активних замовлень."
         )
 
     await update.message.reply_text(
-        f"✅ Замовлення #{order_id} прийнято.\nМи скоро з вами зв'яжемося ❤️",
+        confirmation_text,
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    contact_keyboard = admin_contact_keyboard()
+    if contact_keyboard:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Потрібно уточнити деталі?",
+            reply_markup=contact_keyboard,
+        )
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Головне меню 🍰",
         reply_markup=get_main_menu(user_id),
     )
 
