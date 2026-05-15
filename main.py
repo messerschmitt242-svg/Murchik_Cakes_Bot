@@ -193,7 +193,7 @@ def build_app():
 
     review_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^💬 Відгуки$"), review_start),
+            MessageHandler(filters.Regex("^💬 Відгуки$|^💬 Отзывы$|^💬 Opinie$|^💬 Reviews$"), review_start),
         ],
         states={
             REVIEW_MENU: [
@@ -223,7 +223,7 @@ def build_app():
 
     custom_order_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^🎂 Індивідуальне замовлення$"), custom_order_start),
+            MessageHandler(filters.Regex("^🎂 Індивідуальне замовлення$|^🎂 Индивидуальный заказ$|^🎂 Zamówienie indywidualne$|^🎂 Custom order$"), custom_order_start),
         ],
         states={
             CUSTOM_NAME: [
@@ -304,9 +304,9 @@ def build_app():
 
     # Главное меню
     app.add_handler(MessageHandler(filters.Regex("^🍰 Каталог$"), show_products))
-    app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$"), show_cart))
+    app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$|^🛒 Корзина$|^🛒 Koszyk$|^🛒 Cart$"), show_cart))
     app.add_handler(MessageHandler(filters.Regex("^📦 Мої замовлення$"), my_orders))
-    app.add_handler(MessageHandler(filters.Regex("^❤️ Обране$"), show_favorites))
+    app.add_handler(MessageHandler(filters.Regex("^❤️ Обране$|^❤️ Избранное$|^❤️ Ulubione$|^❤️ Favorites$"), show_favorites))
     app.add_handler(MessageHandler(filters.Regex("^📋 Активні замовлення$"), active_orders))
     app.add_handler(CommandHandler("reviews", show_reviews_admin))
     app.add_handler(MessageHandler(filters.Regex("^❓ FAQ$"), faq))
