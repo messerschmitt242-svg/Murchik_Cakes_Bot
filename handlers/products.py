@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from database.products_db import get_all_products, get_product, get_categories
 from database.reviews_db import get_product_rating_db
+from database.favorites_db import is_favorite_db
 from handlers.cleanup import delete_callback_message
 
 
@@ -112,9 +113,11 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
 📝 {product['description']}
 """
 
+    favorite_text = "💔 Видалити з обраного" if is_favorite_db(query.from_user.id, product_id) else "❤️ Додати в обране"
+
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🛒 Додати в кошик", callback_data=f"add_{product_id}")],
-        [InlineKeyboardButton("❤️ Додати в обране", callback_data=f"favorite_{product_id}")],
+        [InlineKeyboardButton(favorite_text, callback_data=f"favorite_{product_id}")],
         [InlineKeyboardButton("💬 Подивитися відгуки", callback_data=f"product_reviews_{product_id}")],
         [InlineKeyboardButton("⬅️ Назад до категорії", callback_data=f"catalog_category_{product['category']}")],
     ])

@@ -116,3 +116,13 @@ def format_reviews(rows) -> str:
 ------------------
 """
     return text.strip()
+
+
+def delete_review_db(review_id: int) -> bool:
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM reviews WHERE id = ?", (review_id,))
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed

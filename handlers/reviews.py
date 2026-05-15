@@ -11,6 +11,7 @@ from database.reviews_db import (
     get_bakery_reviews_db,
     get_product_reviews_db,
     format_reviews,
+    delete_review_db,
 )
 
 REVIEW_MENU = 700
@@ -274,6 +275,18 @@ async def review_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+def _admin_reviews_keyboard(rows):
+    keyboard = []
+    for r in rows:
+        keyboard.append([
+            InlineKeyboardButton(
+                f"🗑 Видалити відгук #{r['id']}",
+                callback_data=f"delete_review_{r['id']}"
+            )
+        ])
+    return InlineKeyboardMarkup(keyboard)
+
+
 async def show_reviews_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         return
@@ -281,7 +294,8 @@ async def show_reviews_admin(update: Update, context: ContextTypes.DEFAULT_TYPE)
     reviews = get_reviews_db(limit=10)
 
     await update.message.reply_text(
-        "💬 Останні відгуки:\n\n" + format_reviews(reviews)
+        "💬 Останні відгуки:\n\n" + format_reviews(reviews),
+        reply_markup=_admin_reviews_keyboard(reviews) if reviews else None,
     )
 
 
@@ -306,3 +320,20 @@ async def show_bakery_reviews(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.message.reply_text(
         "💬 Відгуки про кондитерську:\n\n" + format_reviews(reviews)
     )
+
+
+async def delete_review_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(query.from_user.id):
+        await query.message.reply_text("Недоступно.")
+        return
+
+    review_id = int(query.data.split("_")[-1])
+    deleted = delete_review_db(review_id)
+
+    if deleted:
+        await query.message.reply_text(f"✅ Відгук #{review_id} видалено.")
+    else:
+        await query.message.reply_text(f"❌ Відгук #{review_id} не знайдено.")
