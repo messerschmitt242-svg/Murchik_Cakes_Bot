@@ -265,6 +265,8 @@ def build_app():
     app.add_handler(CommandHandler("clear_test_data", clear_test_data))
     app.add_handler(MessageHandler(filters.Regex(f"^{HOME_BUTTON_TEXT}$"), go_home))
     app.add_handler(CallbackQueryHandler(go_home_inline, pattern="^home_inline$"))
+    app.add_handler(MessageHandler(filters.Regex("🌐 Мова|🌐 Язык|🌐 Język|🌐 Language"), language_menu))
+    app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
     app.add_handler(CallbackQueryHandler(pickup_info, pattern=r"^pickup_(order|custom_order)_\d+$"))
 
     # Адмінські приховані кнопки головного меню
@@ -320,5 +322,3 @@ if __name__ == "__main__":
     application.run_polling()
 
 
-app.add_handler(MessageHandler(filters.Regex("🌐 Мова|🌐 Язык|🌐 Język|🌐 Language"), language_menu))
-app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
