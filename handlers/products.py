@@ -5,12 +5,14 @@ from database.products_db import get_all_products, get_product, get_categories
 from database.reviews_db import get_product_rating_db
 from database.favorites_db import is_favorite_db
 from handlers.cleanup import delete_callback_message
+from handlers.home import HOME_BUTTON_TEXT
 
 
 def _category_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎂 Торти", callback_data="catalog_category_Торти")],
         [InlineKeyboardButton("🧁 Тістечка", callback_data="catalog_category_Тістечка")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
@@ -23,6 +25,9 @@ def _products_keyboard(products):
 
     keyboard.append([
         InlineKeyboardButton("⬅️ До категорій", callback_data="catalog_back")
+    ])
+    keyboard.append([
+        InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")
     ])
 
     return InlineKeyboardMarkup(keyboard)
@@ -120,6 +125,7 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton(favorite_text, callback_data=f"favorite_{product_id}")],
         [InlineKeyboardButton("💬 Подивитися відгуки", callback_data=f"product_reviews_{product_id}")],
         [InlineKeyboardButton("⬅️ Назад до категорії", callback_data=f"catalog_category_{product['category']}")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
     photos = product.get("photos", [])

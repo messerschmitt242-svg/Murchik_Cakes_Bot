@@ -5,6 +5,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 from config import ADMIN_IDS, is_admin
 from database.orders_db import get_user_orders
+from handlers.home import HOME_BUTTON_TEXT
 from database.reviews_db import (
     add_review_db,
     get_reviews_db,
@@ -25,6 +26,7 @@ def _reviews_main_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👀 Подивитися відгуки", callback_data="reviews_view")],
         [InlineKeyboardButton("✍️ Залишити відгук", callback_data="reviews_leave")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
@@ -33,6 +35,7 @@ def _review_type_keyboard():
         [InlineKeyboardButton("🏠 Про кондитерську", callback_data="review_type_bakery")],
         [InlineKeyboardButton("🍰 Про конкретний десерт", callback_data="review_type_product")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="review_cancel")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
@@ -48,6 +51,7 @@ def _rating_keyboard():
             InlineKeyboardButton("⭐ 1", callback_data="review_rating_1"),
         ],
         [InlineKeyboardButton("❌ Скасувати", callback_data="review_cancel")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
@@ -95,6 +99,7 @@ def _last_order_products_keyboard(products):
         ])
 
     keyboard.append([InlineKeyboardButton("❌ Скасувати", callback_data="review_cancel")])
+    keyboard.append([InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")])
 
     return InlineKeyboardMarkup(keyboard)
 

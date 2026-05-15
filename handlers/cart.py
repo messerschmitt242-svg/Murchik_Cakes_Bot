@@ -13,6 +13,7 @@ from database.cart_db import (
 from database.orders_db import create_order
 from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
+from handlers.home import HOME_BUTTON_TEXT
 
 CART_NAME = 200
 CART_PHONE = 201
@@ -46,6 +47,7 @@ def _format_cart(user_id: int):
     text += f"\n💰 Разом: {total:.2f} zł"
 
     keyboard.append([InlineKeyboardButton("📦 Оформити замовлення", callback_data="cart_checkout")])
+    keyboard.append([InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")])
 
     return text, InlineKeyboardMarkup(keyboard)
 

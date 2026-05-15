@@ -6,6 +6,7 @@ from database.custom_orders_db import create_custom_order_db
 from database.products_db import get_all_products, get_product, get_categories
 from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
+from handlers.home import HOME_BUTTON_TEXT
 
 CUSTOM_NAME = 800
 CUSTOM_PHONE = 801
@@ -21,6 +22,7 @@ def _category_keyboard():
         [InlineKeyboardButton("🎂 Торти", callback_data="custom_category_Торти")],
         [InlineKeyboardButton("🧁 Тістечка", callback_data="custom_category_Тістечка")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="custom_cancel")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
@@ -37,6 +39,7 @@ def _products_keyboard(products):
 
     keyboard.append([InlineKeyboardButton("⬅️ До категорій", callback_data="custom_back_categories")])
     keyboard.append([InlineKeyboardButton("❌ Скасувати", callback_data="custom_cancel")])
+    keyboard.append([InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")])
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -45,6 +48,7 @@ def _skip_photo_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Пропустити фото", callback_data="custom_skip_photo")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="custom_cancel")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 

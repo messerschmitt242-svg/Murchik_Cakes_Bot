@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from config import is_admin
 from database.products_db import add_product, CATEGORIES
 from handlers.cleanup import delete_callback_message
+from handlers.home import HOME_BUTTON_TEXT
 
 ADD_PHOTO = 100
 ADD_NAME = 101
@@ -16,6 +17,7 @@ def _finish_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Завершити фото", callback_data="finish_add_photos")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="cancel_add_product")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
@@ -24,6 +26,7 @@ def _category_keyboard():
         [InlineKeyboardButton("🎂 Торти", callback_data="add_category_Торти")],
         [InlineKeyboardButton("🧁 Тістечка", callback_data="add_category_Тістечка")],
         [InlineKeyboardButton("❌ Скасувати", callback_data="cancel_add_product")],
+        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
     ])
 
 
