@@ -16,5 +16,5 @@ async def regenerate_translations(update: Update, context: ContextTypes.DEFAULT_
             count += 1
 
     await update.message.reply_text(
-        f"✅ Переклади оновлено для товарів: {count}"
+        f"✅ Переклади повністю пересоздано для товарів: {count}\n\nЯкщо опис уже був відкритий у чаті раніше — натисніть товар заново в каталозі."
     )
