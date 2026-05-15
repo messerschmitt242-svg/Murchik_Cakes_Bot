@@ -40,3 +40,13 @@ TEXTS.update({
     "cancel":{"ua":"❌ Скасувати","ru":"❌ Отменить","pl":"❌ Anuluj","en":"❌ Cancel"},
     "top_reviews":{"ua":"⭐ Топ-5 відгуків:\n\n","ru":"⭐ Топ-5 отзывов:\n\n","pl":"⭐ Top 5 opinii:\n\n","en":"⭐ Top 5 reviews:\n\n"},
 })
+
+
+TEXTS.update({
+    "rating_prefix":{"ua":"⭐ Оцінка:","ru":"⭐ Оценка:","pl":"⭐ Ocena:","en":"⭐ Rating:"},
+    "rating_empty":{"ua":"⭐ Оцінка: поки немає","ru":"⭐ Оценок пока нет","pl":"⭐ Brak ocen","en":"⭐ No ratings yet"},
+    "add_to_cart":{"ua":"🛒 Додати в кошик","ru":"🛒 Добавить в корзину","pl":"🛒 Dodaj do koszyka","en":"🛒 Add to cart"},
+    "add_favorite":{"ua":"❤️ Додати в обране","ru":"❤️ Добавить в избранное","pl":"❤️ Dodaj do ulubionych","en":"❤️ Add to favorites"},
+    "remove_favorite":{"ua":"💔 Видалити з обраного","ru":"💔 Удалить из избранного","pl":"💔 Usuń z ulubionych","en":"💔 Remove from favorites"},
+    "add_product_question":{"ua":"Додати цей товар у кошик?","ru":"Добавить этот товар в корзину?","pl":"Dodać ten produkt do koszyka?","en":"Add this product to cart?"},
+})

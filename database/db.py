@@ -120,6 +120,7 @@ def init_db():
     # Мягкая миграция старых БД, если таблицы уже были созданы иначе.
     _ensure_column(cursor, "products", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
     _ensure_column(cursor, "products", "category", "TEXT DEFAULT 'Торти'")
+    _ensure_column(cursor, "products", "translations", "TEXT DEFAULT '{}'")
     _ensure_column(cursor, "cart", "promo_code", "TEXT DEFAULT ''")
     _ensure_column(cursor, "cart", "discount_percent", "INTEGER DEFAULT 0")
     _ensure_column(cursor, "orders", "items", "TEXT DEFAULT ''")

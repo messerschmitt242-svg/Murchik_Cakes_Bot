@@ -10,6 +10,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from database.db import init_db
 from handlers.maintenance import clear_test_data
+from handlers.product_translations import regenerate_translations
 from handlers.home import go_home, go_home_inline, HOME_BUTTON_TEXT
 from handlers.language import language_menu, set_language
 from handlers.pickup import pickup_info
@@ -263,6 +264,7 @@ def build_app():
     app.add_handler(CommandHandler("orders", list_orders))
     app.add_handler(CommandHandler("set_status", set_status))
     app.add_handler(CommandHandler("clear_test_data", clear_test_data))
+    app.add_handler(CommandHandler("regen_translations", regenerate_translations))
     app.add_handler(MessageHandler(filters.Regex(f"^{HOME_BUTTON_TEXT}$"), go_home))
     app.add_handler(CallbackQueryHandler(go_home_inline, pattern="^home_inline$"))
     app.add_handler(MessageHandler(filters.Regex("🌐 Мова|🌐 Язык|🌐 Język|🌐 Language"), language_menu))

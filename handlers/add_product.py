@@ -167,7 +167,7 @@ async def choose_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"✅ Товар збережено у каталозі.\n\nID: {product_id}\nНазва: {name}\nКатегорія: {category}\nЦіна: {price:.2f} zł"
+        text=f"✅ Товар збережено у каталозі.\n\nID: {product_id}\nНазва: {name}\nКатегорія: {category}\nЦіна: {price:.2f} zł\n\n🌐 Переклади для 4 мов створено автоматично."
     )
 
     return ConversationHandler.END

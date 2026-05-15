@@ -6,6 +6,7 @@ from database.reviews_db import get_product_rating_db
 from database.favorites_db import is_favorite_db
 from handlers.cleanup import delete_callback_message
 from locales import tr
+from utils_translation import translate_product_name, translate_description
 
 
 def _category_keyboard(user_id: int):
@@ -20,7 +21,7 @@ def _products_keyboard(products, user_id: int):
     keyboard = []
     for product in products:
         keyboard.append([
-            InlineKeyboardButton(product["name"], callback_data=f"catalog_product_{product['id']}")
+            InlineKeyboardButton(translate_product_name(product["name"], user_id, product.get("translations")), callback_data=f"catalog_product_{product['id']}")
         ])
 
     keyboard.append([InlineKeyboardButton(tr(user_id, "back_categories"), callback_data="catalog_back")])
@@ -103,26 +104,29 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
     avg_rating, count_reviews = get_product_rating_db(product_id)
 
     if count_reviews:
-        rating_line = f"⭐ Оцінка: {avg_rating:.1f}/5 ({count_reviews})"
+        rating_line = tr(user_id, "rating_prefix") + f" {avg_rating:.1f}/5 ({count_reviews})"
     else:
-        rating_line = "⭐ Оцінка: поки немає"
+        rating_line = tr(user_id, "rating_empty")
+
+    translated_name = translate_product_name(product["name"], user_id, product.get("translations"))
+    translated_description = translate_description(product["description"], user_id, product.get("translations"))
 
     caption = f"""
-🍰 {product['name']}
+🍰 {translated_name}
 
 💰 {product['price']:.2f} zł
 {rating_line}
 
-📝 {product['description']}
+📝 {translated_description}
 """
 
-    favorite_text = "💔 Видалити з обраного" if is_favorite_db(user_id, product_id) else "❤️ Додати в обране"
+    favorite_text = tr(user_id, "remove_favorite") if is_favorite_db(user_id, product_id) else tr(user_id, "add_favorite")
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛒 Додати в кошик", callback_data=f"add_{product_id}")],
+        [InlineKeyboardButton(tr(user_id, "add_to_cart"), callback_data=f"add_{product_id}")],
         [InlineKeyboardButton(favorite_text, callback_data=f"favorite_{product_id}")],
-        [InlineKeyboardButton("💬 Подивитися відгуки", callback_data=f"product_reviews_{product_id}")],
-        [InlineKeyboardButton("⬅️ Назад до категорії", callback_data=f"catalog_category_{product['category']}")],
+        [InlineKeyboardButton(tr(user_id, "view_reviews"), callback_data=f"product_reviews_{product_id}")],
+        [InlineKeyboardButton(tr(user_id, "back_categories"), callback_data=f"catalog_category_{product['category']}")],
         [InlineKeyboardButton(tr(user_id, "home_button"), callback_data="home_inline")],
     ])
 
@@ -154,7 +158,7 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         await context.bot.send_message(
             chat_id=query.message.chat_id,
-            text="Додати цей товар у кошик?",
+            text=tr(user_id, "add_product_question"),
             reply_markup=keyboard,
         )
         return
