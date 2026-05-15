@@ -9,6 +9,7 @@ from telegram.ext import (
 
 from config import BOT_TOKEN
 from database.db import init_db
+from handlers.maintenance import clear_test_data
 
 from handlers.start import start
 from handlers.id import get_id
@@ -92,6 +93,7 @@ from handlers.reviews import (
     review_cancel,
     show_reviews_admin,
     show_product_reviews,
+    delete_review_admin,
     REVIEW_MENU,
     REVIEW_TYPE,
     REVIEW_PRODUCT,
@@ -257,6 +259,7 @@ def build_app():
     app.add_handler(CommandHandler("id", get_id))
     app.add_handler(CommandHandler("orders", list_orders))
     app.add_handler(CommandHandler("set_status", set_status))
+    app.add_handler(CommandHandler("clear_test_data", clear_test_data))
 
     # Адмінські приховані кнопки головного меню
     app.add_handler(MessageHandler(filters.Regex("^🗑 Видалити продукт$"), delete_product))
@@ -276,6 +279,7 @@ def build_app():
     app.add_handler(CallbackQueryHandler(show_product_detail, pattern=r"^catalog_product_\d+$"))
     app.add_handler(CallbackQueryHandler(toggle_favorite, pattern=r"^favorite_\d+$"))
     app.add_handler(CallbackQueryHandler(show_product_reviews, pattern=r"^product_reviews_\d+$"))
+    app.add_handler(CallbackQueryHandler(delete_review_admin, pattern=r"^delete_review_\d+$"))
 
     # Inline-кнопки админки и удаления
     app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
