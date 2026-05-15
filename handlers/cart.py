@@ -14,6 +14,7 @@ from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
 from handlers.home import HOME_BUTTON_TEXT
 from handlers.admin_notify import notify_admins_text, admin_contact_keyboard
+from locales import tr
 
 CART_NAME = 200
 CART_PHONE = 201
@@ -24,9 +25,9 @@ def _format_cart(user_id: int):
     items, total, total_before_discount, total_discount = get_cart_items_db(user_id)
 
     if not items:
-        return "Кошик порожній 🛒", None
+        return tr(user_id, "cart_empty"), None
 
-    text = "🛒 Ваш кошик:\n\n"
+    text = tr(user_id, "cart_title")
     keyboard = []
 
     for item in items:
@@ -46,8 +47,8 @@ def _format_cart(user_id: int):
         text += f"\nЗнижка: -{total_discount:.2f} zł"
     text += f"\n💰 Разом: {total:.2f} zł"
 
-    keyboard.append([InlineKeyboardButton("📦 Оформити замовлення", callback_data="cart_checkout")])
-    keyboard.append([InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")])
+    keyboard.append([InlineKeyboardButton(tr(user_id, "checkout"), callback_data="cart_checkout")])
+    keyboard.append([InlineKeyboardButton(tr(user_id, "home_button"), callback_data="home_inline")])
 
     return text, InlineKeyboardMarkup(keyboard)
 

@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from keyboards.main_menu import get_main_menu
+from locales import tr
 
 
 HOME_BUTTON_TEXT = "🏠 Повернутися до головного меню"
@@ -35,7 +36,7 @@ async def go_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text="Головне меню 🍰",
+        text=tr(user_id, "home_menu"),
         reply_markup=get_main_menu(user_id),
     )
 
@@ -62,6 +63,6 @@ async def go_home_inline(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text="Головне меню 🍰",
+        text=tr(user_id, "home_menu"),
         reply_markup=get_main_menu(user_id),
     )

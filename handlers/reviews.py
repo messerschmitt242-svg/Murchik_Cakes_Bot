@@ -6,6 +6,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from config import ADMIN_IDS, is_admin
 from database.orders_db import get_user_orders
 from handlers.home import HOME_BUTTON_TEXT
+from locales import tr
 from database.reviews_db import (
     add_review_db,
     get_reviews_db,
@@ -22,24 +23,24 @@ REVIEW_TEXT = 703
 REVIEW_RATING = 704
 
 
-def _reviews_main_keyboard():
+def _reviews_main_keyboard(user_id: int):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("👀 Подивитися відгуки", callback_data="reviews_view")],
-        [InlineKeyboardButton("✍️ Залишити відгук", callback_data="reviews_leave")],
-        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
+        [InlineKeyboardButton(tr(user_id, "view_reviews"), callback_data="reviews_view")],
+        [InlineKeyboardButton(tr(user_id, "leave_review"), callback_data="reviews_leave")],
+        [InlineKeyboardButton(tr(user_id, "home_button"), callback_data="home_inline")],
     ])
 
 
-def _review_type_keyboard():
+def _review_type_keyboard(user_id: int):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏠 Про кондитерську", callback_data="review_type_bakery")],
-        [InlineKeyboardButton("🍰 Про конкретний десерт", callback_data="review_type_product")],
-        [InlineKeyboardButton("❌ Скасувати", callback_data="review_cancel")],
-        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
+        [InlineKeyboardButton(tr(user_id, "review_bakery"), callback_data="review_type_bakery")],
+        [InlineKeyboardButton(tr(user_id, "review_product"), callback_data="review_type_product")],
+        [InlineKeyboardButton(tr(user_id, "cancel"), callback_data="review_cancel")],
+        [InlineKeyboardButton(tr(user_id, "home_button"), callback_data="home_inline")],
     ])
 
 
-def _rating_keyboard():
+def _rating_keyboard(user_id: int):
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("⭐ 5", callback_data="review_rating_5"),
@@ -50,8 +51,8 @@ def _rating_keyboard():
             InlineKeyboardButton("⭐ 2", callback_data="review_rating_2"),
             InlineKeyboardButton("⭐ 1", callback_data="review_rating_1"),
         ],
-        [InlineKeyboardButton("❌ Скасувати", callback_data="review_cancel")],
-        [InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")],
+        [InlineKeyboardButton(tr(user_id, "cancel"), callback_data="review_cancel")],
+        [InlineKeyboardButton(tr(user_id, "home_button"), callback_data="home_inline")],
     ])
 
 
@@ -87,7 +88,7 @@ def _last_order_products(user_id: int):
     return products
 
 
-def _last_order_products_keyboard(products):
+def _last_order_products_keyboard(products, user_id: int):
     keyboard = []
 
     for item in products:
@@ -98,16 +99,16 @@ def _last_order_products_keyboard(products):
             )
         ])
 
-    keyboard.append([InlineKeyboardButton("❌ Скасувати", callback_data="review_cancel")])
-    keyboard.append([InlineKeyboardButton(HOME_BUTTON_TEXT, callback_data="home_inline")])
+    keyboard.append([InlineKeyboardButton(tr(user_id, "cancel"), callback_data="review_cancel")])
+    keyboard.append([InlineKeyboardButton(tr(user_id, "home_button"), callback_data="home_inline")])
 
     return InlineKeyboardMarkup(keyboard)
 
 
 async def review_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "💬 Відгуки",
-        reply_markup=_reviews_main_keyboard(),
+        tr(update.effective_user.id, "reviews_title"),
+        reply_markup=_reviews_main_keyboard(update.effective_user.id),
     )
     return REVIEW_MENU
 
@@ -119,7 +120,7 @@ async def reviews_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reviews = get_reviews_db(limit=5)
 
     await query.message.reply_text(
-        "⭐ Топ-5 відгуків:\n\n" + format_reviews(reviews)
+        tr(query.from_user.id, "top_reviews") + format_reviews(reviews)
     )
 
     return ConversationHandler.END
@@ -130,8 +131,8 @@ async def reviews_leave(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     await query.message.reply_text(
-        "Про що хочете залишити відгук?",
-        reply_markup=_review_type_keyboard(),
+        tr(query.from_user.id, "review_question"),
+        reply_markup=_review_type_keyboard(query.from_user.id),
     )
 
     return REVIEW_TYPE
@@ -168,7 +169,7 @@ async def review_type_product(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await query.message.reply_text(
         "Оберіть десерт з вашого останнього замовлення:",
-        reply_markup=_last_order_products_keyboard(products),
+        reply_markup=_last_order_products_keyboard(products, query.from_user.id),
     )
 
     return REVIEW_PRODUCT
@@ -210,7 +211,7 @@ async def review_get_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "Оцініть від 1 до 5:",
-        reply_markup=_rating_keyboard(),
+        reply_markup=_rating_keyboard(update.effective_user.id),
     )
 
     return REVIEW_RATING

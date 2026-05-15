@@ -18,3 +18,25 @@ TEXTS = {
 def tr(user_id,key):
     lang=get_user_language(user_id)
     return TEXTS.get(key,{}).get(lang,TEXTS.get(key,{}).get("ua",key))
+
+# Inner UI texts
+TEXTS.update({
+    "home_button":{"ua":"🏠 Повернутися до головного меню","ru":"🏠 Вернуться в главное меню","pl":"🏠 Wróć do menu głównego","en":"🏠 Back to main menu"},
+    "home_menu":{"ua":"Головне меню 🍰","ru":"Главное меню 🍰","pl":"Menu główne 🍰","en":"Main menu 🍰"},
+    "cat_choose":{"ua":"Оберіть категорію каталогу 🍰","ru":"Выберите категорию каталога 🍰","pl":"Wybierz kategorię katalogu 🍰","en":"Choose a catalog category 🍰"},
+    "cat_cakes":{"ua":"🎂 Торти","ru":"🎂 Торты","pl":"🎂 Torty","en":"🎂 Cakes"},
+    "cat_pastries":{"ua":"🧁 Тістечка","ru":"🧁 Пирожные","pl":"🧁 Ciastka","en":"🧁 Pastries"},
+    "back_categories":{"ua":"⬅️ До категорій","ru":"⬅️ К категориям","pl":"⬅️ Do kategorii","en":"⬅️ To categories"},
+    "choose_product":{"ua":"Оберіть товар:","ru":"Выберите товар:","pl":"Wybierz produkt:","en":"Choose a product:"},
+    "cart_empty":{"ua":"Кошик порожній 🛒","ru":"Корзина пуста 🛒","pl":"Koszyk jest pusty 🛒","en":"Cart is empty 🛒"},
+    "cart_title":{"ua":"🛒 Ваш кошик:\n\n","ru":"🛒 Ваша корзина:\n\n","pl":"🛒 Twój koszyk:\n\n","en":"🛒 Your cart:\n\n"},
+    "checkout":{"ua":"📦 Оформити замовлення","ru":"📦 Оформить заказ","pl":"📦 Złóż zamówienie","en":"📦 Checkout"},
+    "reviews_title":{"ua":"💬 Відгуки","ru":"💬 Отзывы","pl":"💬 Opinie","en":"💬 Reviews"},
+    "view_reviews":{"ua":"👀 Подивитися відгуки","ru":"👀 Посмотреть отзывы","pl":"👀 Zobacz opinie","en":"👀 View reviews"},
+    "leave_review":{"ua":"✍️ Залишити відгук","ru":"✍️ Оставить отзыв","pl":"✍️ Zostaw opinię","en":"✍️ Leave a review"},
+    "review_question":{"ua":"Про що хочете залишити відгук?","ru":"О чём хотите оставить отзыв?","pl":"Czego dotyczy opinia?","en":"What would you like to review?"},
+    "review_bakery":{"ua":"🏠 Про кондитерську","ru":"🏠 О кондитерской","pl":"🏠 O cukierni","en":"🏠 About bakery"},
+    "review_product":{"ua":"🍰 Про конкретний десерт","ru":"🍰 О конкретном десерте","pl":"🍰 O konkretnym deserze","en":"🍰 About a specific dessert"},
+    "cancel":{"ua":"❌ Скасувати","ru":"❌ Отменить","pl":"❌ Anuluj","en":"❌ Cancel"},
+    "top_reviews":{"ua":"⭐ Топ-5 відгуків:\n\n","ru":"⭐ Топ-5 отзывов:\n\n","pl":"⭐ Top 5 opinii:\n\n","en":"⭐ Top 5 reviews:\n\n"},
+})
