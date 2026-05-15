@@ -12,6 +12,7 @@ def clear_test_data_keep_catalog_and_reviews():
         "custom_orders",
         "favorites",
         "promo_codes",
+        "reviews",
     ]
 
     for table in tables:
