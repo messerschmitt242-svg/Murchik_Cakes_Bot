@@ -11,6 +11,7 @@ from config import BOT_TOKEN
 from database.db import init_db
 from handlers.maintenance import clear_test_data
 from handlers.home import go_home, go_home_inline, HOME_BUTTON_TEXT
+from handlers.language import language_menu, set_language
 from handlers.pickup import pickup_info
 
 from handlers.start import start
@@ -317,3 +318,7 @@ if __name__ == "__main__":
     application = build_app()
     print("Bot started")
     application.run_polling()
+
+
+app.add_handler(MessageHandler(filters.Regex("🌐 Мова|🌐 Язык|🌐 Język|🌐 Language"), language_menu))
+app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
