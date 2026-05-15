@@ -194,7 +194,7 @@ def build_app():
 
     review_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^💬 Відгуки$|^💬 Отзывы$|^💬 Opinie$|^💬 Reviews$"), review_start),
+            MessageHandler(filters.Regex(r"^💬 (Відгуки|Отзывы|Opinie|Reviews)$"), review_start),
         ],
         states={
             REVIEW_MENU: [
@@ -224,7 +224,7 @@ def build_app():
 
     custom_order_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^🎂 Індивідуальне замовлення$|^🎂 Индивидуальный заказ$|^🎂 Zamówienie indywidualne$|^🎂 Custom order$"), custom_order_start),
+            MessageHandler(filters.Regex(r"^🎂 (Індивідуальне замовлення|Индивидуальный заказ|Zamówienie indywidualne|Custom order)$"), custom_order_start),
         ],
         states={
             CUSTOM_NAME: [
@@ -265,9 +265,9 @@ def build_app():
     app.add_handler(CommandHandler("set_status", set_status))
     app.add_handler(CommandHandler("clear_test_data", clear_test_data))
     app.add_handler(CommandHandler("regen_translations", regenerate_translations))
-    app.add_handler(MessageHandler(filters.Regex(f"^{HOME_BUTTON_TEXT}$"), go_home))
+    app.add_handler(MessageHandler(filters.Regex(r"^🏠 (Повернутися до головного меню|Вернуться в главное меню|Wróć do menu głównego|Back to main menu)$"), go_home))
     app.add_handler(CallbackQueryHandler(go_home_inline, pattern="^home_inline$"))
-    app.add_handler(MessageHandler(filters.Regex("🌐 Мова|🌐 Язык|🌐 Język|🌐 Language"), language_menu))
+    app.add_handler(MessageHandler(filters.Regex(r"^🌐 (Мова|Язык|Język|Language)$"), language_menu))
     app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
     app.add_handler(CallbackQueryHandler(pickup_info, pattern=r"^pickup_(order|custom_order)_\d+$"))
 
@@ -305,14 +305,14 @@ def build_app():
     app.add_handler(CallbackQueryHandler(delete_item, pattern=r"^cart_del_\d+$"))
 
     # Главное меню
-    app.add_handler(MessageHandler(filters.Regex("^🍰 Каталог$"), show_products))
-    app.add_handler(MessageHandler(filters.Regex("^🛒 Кошик$|^🛒 Корзина$|^🛒 Koszyk$|^🛒 Cart$"), show_cart))
-    app.add_handler(MessageHandler(filters.Regex("^📦 Мої замовлення$"), my_orders))
-    app.add_handler(MessageHandler(filters.Regex("^❤️ Обране$|^❤️ Избранное$|^❤️ Ulubione$|^❤️ Favorites$"), show_favorites))
+    app.add_handler(MessageHandler(filters.Regex(r"^🍰 (Каталог|Katalog|Catalog)$"), show_products))
+    app.add_handler(MessageHandler(filters.Regex(r"^🛒 (Кошик|Корзина|Koszyk|Cart)$"), show_cart))
+    app.add_handler(MessageHandler(filters.Regex(r"^📦 (Мої замовлення|Мои заказы|Moje zamówienia|My orders)$"), my_orders))
+    app.add_handler(MessageHandler(filters.Regex(r"^❤️ (Обране|Избранное|Ulubione|Favorites)$"), show_favorites))
     app.add_handler(MessageHandler(filters.Regex("^📋 Активні замовлення$"), active_orders))
     app.add_handler(CommandHandler("reviews", show_reviews_admin))
-    app.add_handler(MessageHandler(filters.Regex("^❓ FAQ$"), faq))
-    app.add_handler(MessageHandler(filters.Regex("^📍 Контакти$"), contacts))
+    app.add_handler(MessageHandler(filters.Regex(r"^❓ FAQ$"), faq))
+    app.add_handler(MessageHandler(filters.Regex(r"^📍 (Контакти|Контакты|Kontakt|Contacts)$"), contacts))
 
     app.add_error_handler(error_handler)
     return app
