@@ -15,9 +15,17 @@ TEXTS = {
     "lang_changed":{"ua":"✅ Мову змінено","ru":"✅ Язык изменен","pl":"✅ Zmieniono język","en":"✅ Language changed"},
 }
 
-def tr(user_id,key):
-    lang=get_user_language(user_id)
-    return TEXTS.get(key,{}).get(lang,TEXTS.get(key,{}).get("ua",key))
+def tr(user_id, key):
+    lang = get_user_language(user_id)
+    value = TEXTS.get(key, {}).get(lang, TEXTS.get(key, {}).get("ua", key))
+
+    # Some multiline texts are stored as escaped \\n in dictionaries.
+    # Convert them to real Telegram line breaks before sending.
+    if isinstance(value, str):
+        value = value.replace("\\n", "\n")
+        value = value.replace("\\'", "'")
+
+    return value
 
 # Inner UI texts
 TEXTS.update({
