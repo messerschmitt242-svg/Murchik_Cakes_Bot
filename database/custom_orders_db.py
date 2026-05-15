@@ -88,3 +88,20 @@ def next_custom_status(current_status: str):
     if current_status == "Готове до видачі":
         return "Завершено", "🏁 Завершено"
     return None, None
+
+
+def get_user_custom_orders(user_id: int):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, created_at
+        FROM custom_orders
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user_id,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

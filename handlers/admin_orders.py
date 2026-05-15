@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from config import is_admin
 from handlers.cleanup import delete_callback_message
+from handlers.pickup import PICKUP_READY_STATUS, pickup_button, send_pickup_info_to_chat
 from database.orders_db import (
     STATUSES,
     get_all_orders,
@@ -255,6 +256,17 @@ async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYP
         text=f"✅ Статус замовлення #{order_id} змінено на: {next_value}"
     )
 
+    if next_value == PICKUP_READY_STATUS:
+        await context.bot.send_message(
+            chat_id=order["user_id"],
+            text=f"✅ Ваше замовлення #{order_id} готове до видачі.",
+            reply_markup=pickup_button(f"pickup_order_{order_id}"),
+        )
+        await send_pickup_info_to_chat(
+            context=context,
+            chat_id=order["user_id"],
+        )
+
     refreshed = get_order(order_id)
     next_next_value, button_text = next_status(refreshed["status"])
     if next_next_value:
@@ -302,6 +314,17 @@ async def advance_custom_order_status(update: Update, context: ContextTypes.DEFA
         chat_id=chat_id,
         text=f"✅ Статус індивідуального замовлення C#{order_id} змінено на: {next_value}"
     )
+
+    if next_value == PICKUP_READY_STATUS:
+        await context.bot.send_message(
+            chat_id=order["user_id"],
+            text=f"✅ Ваше індивідуальне замовлення C#{order_id} готове до видачі.",
+            reply_markup=pickup_button(f"pickup_custom_order_{order_id}"),
+        )
+        await send_pickup_info_to_chat(
+            context=context,
+            chat_id=order["user_id"],
+        )
 
     refreshed = get_custom_order(order_id)
     next_next_value, button_text = next_custom_status(refreshed["status"])

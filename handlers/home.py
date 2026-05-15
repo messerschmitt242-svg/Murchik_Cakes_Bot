@@ -24,7 +24,7 @@ async def go_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current_message_id = update.effective_message.message_id
 
     # Best-effort cleanup of recent chat messages.
-    for message_id in range(current_message_id, max(0, current_message_id - 15), -1):
+    for message_id in range(current_message_id, max(0, current_message_id - 80), -1):
         try:
             await context.bot.delete_message(
                 chat_id=chat_id,
@@ -51,7 +51,7 @@ async def go_home_inline(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     current_message_id = query.message.message_id
 
-    for message_id in range(current_message_id, max(0, current_message_id - 15), -1):
+    for message_id in range(current_message_id, max(0, current_message_id - 80), -1):
         try:
             await context.bot.delete_message(
                 chat_id=chat_id,

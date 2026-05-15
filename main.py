@@ -11,6 +11,7 @@ from config import BOT_TOKEN
 from database.db import init_db
 from handlers.maintenance import clear_test_data
 from handlers.home import go_home, go_home_inline, HOME_BUTTON_TEXT
+from handlers.pickup import pickup_info
 
 from handlers.start import start
 from handlers.id import get_id
@@ -263,6 +264,7 @@ def build_app():
     app.add_handler(CommandHandler("clear_test_data", clear_test_data))
     app.add_handler(MessageHandler(filters.Regex(f"^{HOME_BUTTON_TEXT}$"), go_home))
     app.add_handler(CallbackQueryHandler(go_home_inline, pattern="^home_inline$"))
+    app.add_handler(CallbackQueryHandler(pickup_info, pattern=r"^pickup_(order|custom_order)_\d+$"))
 
     # Адмінські приховані кнопки головного меню
     app.add_handler(MessageHandler(filters.Regex("^🗑 Видалити продукт$"), delete_product))
