@@ -53,7 +53,7 @@ def get_favorites_db(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT p.id, p.name, p.price, p.description, p.photos, p.category
+        SELECT p.id, p.name, p.price, p.description, p.photos, p.category, p.translations
         FROM favorites f
         JOIN products p ON p.id = f.product_id
         WHERE f.user_id = ?
@@ -80,6 +80,7 @@ def get_favorites_db(user_id: int):
             "description": row["description"] or "",
             "photos": photos,
             "category": row["category"] or "Торти",
+            "translations": json.loads(row["translations"] or "{}") if "translations" in row.keys() else {},
         })
 
     return result

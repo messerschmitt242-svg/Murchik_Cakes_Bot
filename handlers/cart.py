@@ -67,7 +67,7 @@ async def add_to_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text="✅ Додано у кошик 🛒"
+        text=tr(user_id, "cart_added")
     )
 
 
@@ -129,7 +129,7 @@ async def promo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text="Введіть промокод для цього товару:"
+        text=tr(query.from_user.id, "enter_promo")
     )
     return PROMO_CODE
 
@@ -140,17 +140,17 @@ async def promo_apply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = update.message.text.strip()
 
     if not product_id:
-        await update.message.reply_text("Помилка: товар не обрано.")
+        await update.message.reply_text(tr(user_id, "promo_missing_product"))
         return ConversationHandler.END
 
     success, discount = apply_promo_to_cart_item(user_id, product_id, code)
     context.user_data.pop("promo_product_id", None)
 
     if not success:
-        await update.message.reply_text("❌ Промокод не знайдено або він неактивний.")
+        await update.message.reply_text(tr(user_id, "promo_not_found"))
         return ConversationHandler.END
 
-    await update.message.reply_text(f"✅ Промокод застосовано: -{discount}%")
+    await update.message.reply_text(f"{tr(user_id, 'promo_applied')} -{discount}%")
     text, keyboard = _format_cart(user_id)
     await update.message.reply_text(text, reply_markup=keyboard)
 
@@ -159,7 +159,7 @@ async def promo_apply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def promo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.pop("promo_product_id", None)
-    await update.message.reply_text("Введення промокоду скасовано.")
+    await update.message.reply_text(tr(update.effective_user.id, "cancel"))
     return ConversationHandler.END
 
 
@@ -170,7 +170,7 @@ async def checkout_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     items, _, _, _ = get_cart_items_db(query.from_user.id)
 
     if not items:
-        await query.message.reply_text("Кошик порожній 🛒")
+        await query.message.reply_text(tr(query.from_user.id, "cart_empty"))
         return ConversationHandler.END
 
     chat_id = query.message.chat_id
@@ -178,7 +178,7 @@ async def checkout_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text="Ваше ім'я:"
+        text=tr(query.from_user.id, "name_prompt")
     )
     return CART_NAME
 
@@ -187,13 +187,13 @@ async def checkout_get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["checkout_name"] = update.message.text.strip()
 
     keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton("📱 Надіслати номер", request_contact=True)]],
+        [[KeyboardButton(tr(update.effective_user.id, "share_phone"), request_contact=True)]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
 
     await update.message.reply_text(
-        "Надішліть ваш номер телефону:",
+        tr(update.effective_user.id, "phone_prompt"),
         reply_markup=keyboard,
     )
 
@@ -212,7 +212,7 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
     items, total, _, _ = get_cart_items_db(user_id)
 
     if not items:
-        await update.message.reply_text("Кошик порожній 🛒", reply_markup=get_main_menu(user_id))
+        await update.message.reply_text(tr(user_id, "cart_empty"), reply_markup=get_main_menu(user_id))
         return ConversationHandler.END
 
     order_id = create_order(
@@ -251,29 +251,26 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
 
     if admin_notified > 0:
-        confirmation_text = f"✅ Замовлення #{order_id} прийнято.\nМи скоро з вами зв'яжемося ❤️"
+        confirmation_text = tr(user_id, "order_created_ok").format(id=order_id)
     else:
-        confirmation_text = (
-            f"✅ Замовлення #{order_id} створено.\n"
-            "Адміністратор може побачити його в панелі активних замовлень."
-        )
+        confirmation_text = tr(user_id, "order_created_no_admin").format(id=order_id)
 
     await update.message.reply_text(
         confirmation_text,
         reply_markup=ReplyKeyboardRemove(),
     )
 
-    contact_keyboard = admin_contact_keyboard()
+    contact_keyboard = admin_contact_keyboard(user_id)
     if contact_keyboard:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="Потрібно уточнити деталі?",
+            text=tr(user_id, "need_details"),
             reply_markup=contact_keyboard,
         )
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Головне меню 🍰",
+        text=tr(user_id, "home_menu"),
         reply_markup=get_main_menu(user_id),
     )
 

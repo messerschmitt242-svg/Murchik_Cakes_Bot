@@ -1,16 +1,19 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import ADMIN_IDS, ADMIN_USERNAME
+from locales import tr
 
 
-def admin_contact_keyboard():
+def admin_contact_keyboard(user_id: int | None = None):
     if not ADMIN_USERNAME:
         return None
+
+    text = tr(user_id, "write_admin") if user_id is not None else "💬 Написати адміністратору"
 
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "💬 Написати адміністратору",
+                text,
                 url=f"https://t.me/{ADMIN_USERNAME}"
             )
         ]

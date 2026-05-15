@@ -260,11 +260,12 @@ async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYP
         await context.bot.send_message(
             chat_id=order["user_id"],
             text=f"✅ Ваше замовлення #{order_id} готове до видачі.",
-            reply_markup=pickup_button(f"pickup_order_{order_id}"),
+            reply_markup=pickup_button(f"pickup_order_{order_id}", order["user_id"]),
         )
         await send_pickup_info_to_chat(
             context=context,
             chat_id=order["user_id"],
+            user_id=order["user_id"],
         )
 
     refreshed = get_order(order_id)
@@ -319,11 +320,12 @@ async def advance_custom_order_status(update: Update, context: ContextTypes.DEFA
         await context.bot.send_message(
             chat_id=order["user_id"],
             text=f"✅ Ваше індивідуальне замовлення C#{order_id} готове до видачі.",
-            reply_markup=pickup_button(f"pickup_custom_order_{order_id}"),
+            reply_markup=pickup_button(f"pickup_custom_order_{order_id}", order["user_id"]),
         )
         await send_pickup_info_to_chat(
             context=context,
             chat_id=order["user_id"],
+            user_id=order["user_id"],
         )
 
     refreshed = get_custom_order(order_id)

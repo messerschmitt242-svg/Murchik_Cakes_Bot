@@ -149,7 +149,7 @@ async def review_type_bakery(update: Update, context: ContextTypes.DEFAULT_TYPE)
     }
 
     await query.message.reply_text(
-        "Напишіть ваш відгук про кондитерську:"
+        tr(query.from_user.id, "review_write_bakery")
     )
 
     return REVIEW_TEXT
@@ -163,12 +163,12 @@ async def review_type_product(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if not products:
         await query.message.reply_text(
-            "У вас поки немає завершених або створених замовлень, з яких можна вибрати десерт для відгуку."
+            tr(query.from_user.id, "review_no_orders")
         )
         return ConversationHandler.END
 
     await query.message.reply_text(
-        "Оберіть десерт з вашого останнього замовлення:",
+        tr(query.from_user.id, "review_choose_last_product"),
         reply_markup=_last_order_products_keyboard(products, query.from_user.id),
     )
 
@@ -194,7 +194,7 @@ async def review_choose_product(update: Update, context: ContextTypes.DEFAULT_TY
     }
 
     await query.message.reply_text(
-        f"Напишіть відгук про «{product['name']}»:"
+        tr(query.from_user.id, "review_write_product").format(name=product["name"])
     )
 
     return REVIEW_TEXT
@@ -204,7 +204,7 @@ async def review_get_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
 
     if len(text) < 3:
-        await update.message.reply_text("Відгук занадто короткий. Напишіть трохи детальніше:")
+        await update.message.reply_text(tr(update.effective_user.id, "review_too_short"))
         return REVIEW_TEXT
 
     context.user_data["review_text"] = text
@@ -242,7 +242,7 @@ async def review_choose_rating(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data.pop("review_context", None)
 
     await query.message.reply_text(
-        f"Дякуємо за відгук ❤️\nВаша оцінка: {rating}/5"
+        tr(query.from_user.id, "review_thanks").format(rating=rating)
     )
 
     product_line = ""
@@ -274,9 +274,9 @@ async def review_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query:
         query = update.callback_query
         await query.answer()
-        await query.message.reply_text("Відгук скасовано.")
+        await query.message.reply_text(tr(query.from_user.id, "review_cancelled"))
     elif update.message:
-        await update.message.reply_text("Відгук скасовано.")
+        await update.message.reply_text(tr(update.effective_user.id, "review_cancelled"))
 
     return ConversationHandler.END
 
@@ -313,7 +313,7 @@ async def show_product_reviews(update: Update, context: ContextTypes.DEFAULT_TYP
     reviews = get_product_reviews_db(product_id, limit=5)
 
     await query.message.reply_text(
-        "💬 Відгуки про продукт:\n\n" + format_reviews(reviews)
+        tr(query.from_user.id, "product_reviews_title") + format_reviews(reviews)
     )
 
 
@@ -324,7 +324,7 @@ async def show_bakery_reviews(update: Update, context: ContextTypes.DEFAULT_TYPE
     reviews = get_bakery_reviews_db(limit=5)
 
     await query.message.reply_text(
-        "💬 Відгуки про кондитерську:\n\n" + format_reviews(reviews)
+        tr(query.from_user.id, "bakery_reviews_title") + format_reviews(reviews)
     )
 
 

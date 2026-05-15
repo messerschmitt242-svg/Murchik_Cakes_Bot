@@ -1,25 +1,16 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
+from locales import tr
+
 
 async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = """
-📍 Наші контакти
-
-📞 Номер телефону:
-+48 504 690 652
-
-🕒 Графік роботи:
-Пн–Нд: 10:00 – 18:00
-
-🏠 Адреса:
-ul. Toruńska 45D, Bydgoszcz
-"""
+    user_id = update.effective_user.id
 
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "📍 Побудувати маршрут",
+                tr(user_id, "route_button"),
                 url="https://maps.app.goo.gl/7YLX42TMak4FdaXm9"
             )
         ]
@@ -27,6 +18,6 @@ ul. Toruńska 45D, Bydgoszcz
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=text,
+        text=tr(user_id, "contacts_text"),
         reply_markup=keyboard
     )

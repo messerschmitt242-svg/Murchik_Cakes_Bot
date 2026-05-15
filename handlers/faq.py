@@ -1,23 +1,14 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from keyboards.main_menu import main_menu
+
+from keyboards.main_menu import get_main_menu
+from locales import tr
 
 
 async def faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = """
-❓ Питання та відповіді
-
-📌 За скільки днів замовляти?
-За 4 дні.
-
-📌 Можна свій дизайн?
-Так, можна надіслати референс або опис.
-
-📌 Чи є доставка?
-Поки власної доставки немає. За потреби можемо надіслати через Glovo.
-"""
+    user_id = update.effective_user.id
 
     await update.message.reply_text(
-        text,
-        reply_markup=main_menu
+        tr(user_id, "faq_text"),
+        reply_markup=get_main_menu(user_id)
     )
