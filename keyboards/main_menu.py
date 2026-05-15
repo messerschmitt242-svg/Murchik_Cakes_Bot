@@ -10,7 +10,6 @@ def get_main_menu(user_id: int | None = None):
         ["🎂 Індивідуальне замовлення"],
         ["📦 Мої замовлення"],
         ["❓ FAQ", "📍 Контакти"],
-        ["🏠 Повернутися до головного меню"],
     ]
 
     if user_id is not None and is_admin(user_id):
