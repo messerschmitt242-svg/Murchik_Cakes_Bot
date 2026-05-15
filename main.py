@@ -267,7 +267,7 @@ def build_app():
     app.add_handler(CommandHandler("regen_translations", regenerate_translations))
     app.add_handler(MessageHandler(filters.Regex(r"^🏠 (Повернутися до головного меню|Вернуться в главное меню|Wróć do menu głównego|Back to main menu)$"), go_home))
     app.add_handler(CallbackQueryHandler(go_home_inline, pattern="^home_inline$"))
-    app.add_handler(MessageHandler(filters.Regex(r"^🌐 (Мова|Язык|Język|Language)$"), language_menu))
+    app.add_handler(MessageHandler(filters.Regex(r"^🌐 (Мова|Язык|Język|Language|Мова / Язык / Język / Language)$"), language_menu))
     app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
     app.add_handler(CallbackQueryHandler(pickup_info, pattern=r"^pickup_(order|custom_order)_\d+$"))
 

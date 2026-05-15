@@ -10,7 +10,7 @@ TEXTS = {
     "menu_favorites":{"ua":"❤️ Обране","ru":"❤️ Избранное","pl":"❤️ Ulubione","en":"❤️ Favorites"},
     "menu_faq":{"ua":"❓ FAQ","ru":"❓ FAQ","pl":"❓ FAQ","en":"❓ FAQ"},
     "menu_contacts":{"ua":"📍 Контакти","ru":"📍 Контакты","pl":"📍 Kontakt","en":"📍 Contacts"},
-    "menu_language":{"ua":"🌐 Мова","ru":"🌐 Язык","pl":"🌐 Język","en":"🌐 Language"},
+    "menu_language":{"ua":"🌐 Мова / Язык / Język / Language","ru":"🌐 Мова / Язык / Język / Language","pl":"🌐 Мова / Язык / Język / Language","en":"🌐 Мова / Язык / Język / Language"},
     "choose_lang":{"ua":"Оберіть мову:","ru":"Выберите язык:","pl":"Wybierz język:","en":"Choose language:"},
     "lang_changed":{"ua":"✅ Мову змінено","ru":"✅ Язык изменен","pl":"✅ Zmieniono język","en":"✅ Language changed"},
 }
