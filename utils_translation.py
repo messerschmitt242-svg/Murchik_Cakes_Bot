@@ -35,8 +35,11 @@ WORD_MAP = {
         "бісквіт": "бисквит",
         "начинка": "начинка",
         "торт": "торт",
+        "торти": "торты",
         "тістечко": "пирожное",
         "тістечка": "пирожные",
+        "пирожное": "пирожное",
+        "пирожные": "пирожные",
     },
     "pl": {
         "класичний": "klasyczny",
@@ -69,8 +72,11 @@ WORD_MAP = {
         "бісквіт": "biszkopt",
         "начинка": "nadzienie",
         "торт": "tort",
+        "торти": "torty",
         "тістечко": "ciastko",
         "тістечка": "ciastka",
+        "пирожное": "ciastko",
+        "пирожные": "ciastka",
     },
     "en": {
         "класичний": "classic",
@@ -103,16 +109,31 @@ WORD_MAP = {
         "бісквіт": "sponge cake",
         "начинка": "filling",
         "торт": "cake",
+        "торти": "cakes",
         "тістечко": "pastry",
         "тістечка": "pastries",
+        "пирожное": "pastry",
+        "пирожные": "pastries",
     },
 }
 
-CATEGORY_TRANSLATIONS = {
-    "Торт": {"ua": "Торт", "ru": "Торт", "pl": "Tort", "en": "Cake"},
-    "Тістечка": {"ua": "Тістечка", "ru": "Пирожные", "pl": "Ciastka", "en": "Pastries"},
-    "Тістечко": {"ua": "Тістечко", "ru": "Пирожное", "pl": "Ciastko", "en": "Pastry"},
+# First-word aliases. This fixes old items that were named as
+# "Тістечка Éclair", "тістечка Éclair", "Пирожное Éclair", etc.
+PRODUCT_PREFIXES = {
+    "торт": {"ua": "Торт", "ru": "Торт", "pl": "Tort", "en": "Cake"},
+    "торти": {"ua": "Торти", "ru": "Торты", "pl": "Torty", "en": "Cakes"},
+    "тістечка": {"ua": "Тістечка", "ru": "Пирожные", "pl": "Ciastka", "en": "Pastries"},
+    "тістечко": {"ua": "Тістечко", "ru": "Пирожное", "pl": "Ciastko", "en": "Pastry"},
+    "пирожное": {"ua": "Тістечко", "ru": "Пирожное", "pl": "Ciastko", "en": "Pastry"},
+    "пирожные": {"ua": "Тістечка", "ru": "Пирожные", "pl": "Ciastka", "en": "Pastries"},
+    "ciastko": {"ua": "Тістечко", "ru": "Пирожное", "pl": "Ciastko", "en": "Pastry"},
+    "ciastka": {"ua": "Тістечка", "ru": "Пирожные", "pl": "Ciastka", "en": "Pastries"},
+    "pastry": {"ua": "Тістечко", "ru": "Пирожное", "pl": "Ciastko", "en": "Pastry"},
+    "pastries": {"ua": "Тістечка", "ru": "Пирожные", "pl": "Ciastka", "en": "Pastries"},
+    "cake": {"ua": "Торт", "ru": "Торт", "pl": "Tort", "en": "Cake"},
+    "cakes": {"ua": "Торти", "ru": "Торты", "pl": "Torty", "en": "Cakes"},
 }
+
 
 def _preserve_case(source: str, translated: str) -> str:
     if not source:
@@ -120,6 +141,18 @@ def _preserve_case(source: str, translated: str) -> str:
     if source[0].isupper():
         return translated[:1].upper() + translated[1:]
     return translated
+
+
+def _split_first_word(text: str):
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return "", ""
+
+    parts = cleaned.split(maxsplit=1)
+    first = parts[0].strip(" \t\n\r:—-.,")
+    rest = parts[1].strip() if len(parts) > 1 else ""
+    return first, rest
+
 
 def _translate_words(text: str, lang: str) -> str:
     if lang == "ua":
@@ -148,30 +181,38 @@ def _translate_words(text: str, lang: str) -> str:
 
     return "".join(result)
 
+
+def translate_product_name_raw(name: str, lang: str) -> str:
+    first, rest = _split_first_word(name)
+    key = first.lower()
+
+    if key in PRODUCT_PREFIXES:
+        translated_first = PRODUCT_PREFIXES[key].get(lang, first)
+        return f"{translated_first} {rest}".strip()
+
+    return _translate_words(name, lang)
+
+
+def translate_description_raw(text: str, lang: str) -> str:
+    return _translate_words(text, lang)
+
+
 def generate_product_translations(name: str, description: str) -> dict:
     translations = {}
     for lang in LANGS:
         translations[lang] = {
             "name": translate_product_name_raw(name, lang),
-            "description": _translate_words(description, lang),
+            "description": translate_description_raw(description, lang),
         }
     return translations
 
-def translate_product_name_raw(name: str, lang: str) -> str:
-    for key, values in CATEGORY_TRANSLATIONS.items():
-        if name.startswith(key + " "):
-            rest = name[len(key):].strip()
-            return f"{values.get(lang, key)} {rest}"
-    return _translate_words(name, lang)
-
-def translate_description_raw(text: str, lang: str) -> str:
-    return _translate_words(text, lang)
 
 def translate_product_name(name: str, user_id: int, translations: dict | None = None):
     lang = get_user_language(user_id)
     if translations and translations.get(lang, {}).get("name"):
         return translations[lang]["name"]
     return translate_product_name_raw(name, lang)
+
 
 def translate_description(text: str, user_id: int, translations: dict | None = None):
     lang = get_user_language(user_id)
