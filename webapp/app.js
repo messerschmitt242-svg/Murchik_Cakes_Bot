@@ -60,7 +60,7 @@ const I18N = {
     catalog: "Каталог", cart: "Кошик", orders: "Замовлення", more: "Більше",
     all: "Усе", cakes: "🎂 Торти", pastries: "🧁 Тістечка",
     search: "Пошук десертів...", add: "Додати", view: "Деталі", favorite: "Обране",
-    checkout: "Оформлення", name: "Ім'я", phone: "Телефон", date: "Дата", comment: "Коментар",
+    checkout: "Оформлення", name: "Ім\'я", phone: "Телефон", date: "Дата", deliveryMethod: "Спосіб доставки", deliveryPickup: "Самовивіз", deliveryGlovo: "Кур'єр Glovo (дорого)", paymentMethod: "Оплата", paymentCash: "Готівкою", paymentBlik: "Переказ BLIK", comment: "Коментар",
     createOrder: "Створити замовлення", emptyCart: "Кошик порожній", empty: "Поки нічого немає",
     total: "Разом", orderCreated: "Замовлення створено", favorites: "Обране", reviews: "Відгуки",
     customOrder: "Індивідуальне замовлення", contacts: "Контакти", route: "Побудувати маршрут",
@@ -76,7 +76,7 @@ const I18N = {
     catalog: "Каталог", cart: "Корзина", orders: "Заказы", more: "Ещё",
     all: "Все", cakes: "🎂 Торты", pastries: "🧁 Пирожные",
     search: "Поиск десертов...", add: "Добавить", view: "Детали", favorite: "Избранное",
-    checkout: "Оформление", name: "Имя", phone: "Телефон", date: "Дата", comment: "Комментарий",
+    checkout: "Оформление", name: "Имя", phone: "Телефон", date: "Дата", deliveryMethod: "Способ доставки", deliveryPickup: "Самовывоз", deliveryGlovo: "Курьер Glovo (дорого)", paymentMethod: "Оплата", paymentCash: "Наличкой", paymentBlik: "Перевод BLIK", comment: "Комментарий",
     createOrder: "Создать заказ", emptyCart: "Корзина пуста", empty: "Пока ничего нет",
     total: "Итого", orderCreated: "Заказ создан", favorites: "Избранное", reviews: "Отзывы",
     customOrder: "Индивидуальный заказ", contacts: "Контакты", route: "Построить маршрут",
@@ -92,7 +92,7 @@ const I18N = {
     catalog: "Katalog", cart: "Koszyk", orders: "Zamówienia", more: "Więcej",
     all: "Wszystko", cakes: "🎂 Torty", pastries: "🧁 Ciastka",
     search: "Szukaj deserów...", add: "Dodaj", view: "Szczegóły", favorite: "Ulubione",
-    checkout: "Zamówienie", name: "Imię", phone: "Telefon", date: "Data", comment: "Komentarz",
+    checkout: "Zamówienie", name: "Imię", phone: "Telefon", date: "Data", deliveryMethod: "Sposób dostawy", deliveryPickup: "Odbiór osobisty", deliveryGlovo: "Kurier Glovo (drogo)", paymentMethod: "Płatność", paymentCash: "Gotówką", paymentBlik: "Przelew BLIK", comment: "Komentarz",
     createOrder: "Złóż zamówienie", emptyCart: "Koszyk jest pusty", empty: "Nic tu jeszcze nie ma",
     total: "Razem", orderCreated: "Zamówienie utworzone", favorites: "Ulubione", reviews: "Opinie",
     customOrder: "Zamówienie indywidualne", contacts: "Kontakt", route: "Wyznacz trasę",
@@ -108,7 +108,7 @@ const I18N = {
     catalog: "Catalog", cart: "Cart", orders: "Orders", more: "More",
     all: "All", cakes: "🎂 Cakes", pastries: "🧁 Pastries",
     search: "Search desserts...", add: "Add", view: "Details", favorite: "Favorites",
-    checkout: "Checkout", name: "Name", phone: "Phone", date: "Date", comment: "Comment",
+    checkout: "Checkout", name: "Name", phone: "Phone", date: "Date", deliveryMethod: "Delivery method", deliveryPickup: "Pickup", deliveryGlovo: "Glovo courier (expensive)", paymentMethod: "Payment", paymentCash: "Cash", paymentBlik: "BLIK transfer", comment: "Comment",
     createOrder: "Create order", emptyCart: "Cart is empty", empty: "Nothing here yet",
     total: "Total", orderCreated: "Order created", favorites: "Favorites", reviews: "Reviews",
     customOrder: "Custom order", contacts: "Contacts", route: "Get directions",
@@ -422,19 +422,23 @@ $("checkoutBtn").addEventListener("click", async () => {
   const name = $("orderName").value.trim();
   const phone = $("orderPhone").value.trim();
   const date = $("orderDate").value.trim();
+  const deliveryMethod = $("deliveryMethod").value;
+  const paymentMethod = $("paymentMethod").value;
   const comment = $("orderComment").value.trim();
 
-  if (!name || !phone || !date) return toast(tr("required"));
+  if (!name || !phone || !date || !deliveryMethod || !paymentMethod) return toast(tr("required"));
   if (!isAllowedOrderDate(date)) return toast(`Дата має бути не раніше ${minOrderDateISO()}`);
 
   try {
     const res = await api("/api/orders", {
       method: "POST",
-      body: JSON.stringify({ user_id: state.userId, name, phone, date, comment }),
+      body: JSON.stringify({ user_id: state.userId, name, phone, date, delivery_method: deliveryMethod, payment_method: paymentMethod, comment }),
     });
     haptic("success");
     toast(`${tr("orderCreated")} #${res.id}`);
     $("orderComment").value = "";
+    $("deliveryMethod").value = "";
+    $("paymentMethod").value = "";
     await loadCart();
     showTab("orders");
     await loadOrders();
@@ -451,6 +455,10 @@ async function loadOrders() {
       <strong>${o.type === "custom" ? "🎂" : "📦"} #${o.id}</strong>
       <div class="muted">${tr("status")}: ${o.status || ""}</div>
       ${o.total ? `<div>${tr("total")}: ${Number(o.total).toFixed(2)} zł</div>` : ""}
+      ${o.order_date ? `<div class="muted">${tr("date")}: ${o.order_date}</div>` : ""}
+      ${o.delivery_method ? `<div class="muted">${tr("deliveryMethod")}: ${o.delivery_method}</div>` : ""}
+      ${o.payment_method ? `<div class="muted">${tr("paymentMethod")}: ${o.payment_method}</div>` : ""}
+      ${o.comment ? `<div class="muted">${tr("comment")}: ${o.comment}</div>` : ""}
       ${o.items ? `<div class="muted">${o.items.map(i => `${i.display_name || i.name} ×${i.qty}`).join("<br>")}</div>` : ""}
       ${o.description ? `<div class="muted">${o.description}</div>` : ""}
       ${o.type === "regular" && isCompletedOrder(o.status) && o.items && o.items.length ? `<button class="primary" onclick='startOrderReview(${JSON.stringify(o).replaceAll("'", "&apos;")})'>💬 ${tr("leaveOrderReview")}</button>` : ""}

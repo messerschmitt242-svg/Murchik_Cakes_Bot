@@ -52,6 +52,16 @@
           <input id="orderName" data-placeholder="name" placeholder="Name" />
           <input id="orderPhone" data-placeholder="phone" placeholder="Phone" />
           <input id="orderDate" data-placeholder="date" placeholder="Date" type="date" />
+          <select id="deliveryMethod" data-label="deliveryMethod">
+            <option value="" data-i18n="deliveryMethod">Delivery method</option>
+            <option value="Самовивіз" data-i18n="deliveryPickup">Pickup</option>
+            <option value="Кур'єр Glovo (дорого)" data-i18n="deliveryGlovo">Glovo courier (expensive)</option>
+          </select>
+          <select id="paymentMethod" data-label="paymentMethod">
+            <option value="" data-i18n="paymentMethod">Payment</option>
+            <option value="Готівкою" data-i18n="paymentCash">Cash</option>
+            <option value="Переказ BLIK" data-i18n="paymentBlik">BLIK transfer</option>
+          </select>
           <textarea id="orderComment" data-placeholder="comment" placeholder="Comment"></textarea>
           <button id="checkoutBtn" class="primary" data-i18n="createOrder">Create order</button>
         </div>

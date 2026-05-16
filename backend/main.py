@@ -76,6 +76,8 @@ class OrderRequest(BaseModel):
     name: str
     phone: str
     date: str = ""
+    delivery_method: str = ""
+    payment_method: str = ""
     comment: str = ""
 
 
@@ -348,17 +350,24 @@ def create_order_api(req: OrderRequest):
     if not items:
         raise HTTPException(400, "Cart is empty")
 
-    # Preserve extra Mini App checkout info inside name field for compatibility with old schema.
-    display_name = req.name
-    if req.date or req.comment:
-        display_name = f"{req.name} | Дата: {req.date or '—'} | Коментар: {req.comment or '—'}"
+    allowed_delivery = {"Самовивіз", "Кур'єр Glovo (дорого)", "Самовывоз", "Курьер Glovo (дорого)", "Odbiór osobisty", "Kurier Glovo (drogo)", "Pickup", "Glovo courier (expensive)"}
+    allowed_payment = {"Готівкою", "Переказ BLIK", "Наличкой", "Перевод BLIK", "Gotówką", "Przelew BLIK", "Cash", "BLIK transfer"}
+
+    if req.delivery_method not in allowed_delivery:
+        raise HTTPException(400, "Choose delivery method")
+    if req.payment_method not in allowed_payment:
+        raise HTTPException(400, "Choose payment method")
 
     order_id = create_order(
         user_id=req.user_id,
-        name=display_name,
+        name=req.name,
         phone=req.phone,
         items=items,
         total=total,
+        order_date=req.date,
+        delivery_method=req.delivery_method,
+        payment_method=req.payment_method,
+        comment=req.comment,
     )
     clear_cart_db(req.user_id)
     return {
@@ -379,6 +388,10 @@ def orders(user_id: int):
             "items": _localized_order_items(o["items"], user_id),
             "total": float(o["total"] or 0),
             "status": o["status"],
+            "order_date": o["order_date"],
+            "delivery_method": o["delivery_method"],
+            "payment_method": o["payment_method"],
+            "comment": o["comment"],
             "created_at": str(o["created_at"]),
             "type": "regular",
         })
@@ -391,6 +404,10 @@ def orders(user_id: int):
             "description": o["description"],
             "date": o["date"],
             "status": o["status"],
+            "order_date": o["order_date"],
+            "delivery_method": o["delivery_method"],
+            "payment_method": o["payment_method"],
+            "comment": o["comment"],
             "created_at": str(o["created_at"]),
             "type": "custom",
         })

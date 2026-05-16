@@ -12,6 +12,7 @@ from database.orders_db import (
     update_order_status,
     format_items,
     next_status,
+    format_order_details,
 )
 from database.custom_orders_db import (
     get_active_custom_orders,
@@ -40,6 +41,7 @@ ID: {order['id']}
 Телефон: {order['phone']}
 Статус: {order['status']}
 Сума: {float(order['total'] or 0):.2f} zł
+{format_order_details(order)}
 {format_items(order['items'])}
 ------------------
 """
@@ -143,9 +145,10 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Клієнт: {order['name']}
 Телефон: {order['phone']}
-Дата: {order['created_at']}
+Створено: {order['created_at']}
 Статус: {order['status']}
 Сума: {float(order['total'] or 0):.2f} zł
+{format_order_details(order)}
 
 {format_items(order['items'])}
 """

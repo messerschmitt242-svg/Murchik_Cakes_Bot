@@ -163,6 +163,10 @@ def _init_postgres(cursor):
             items TEXT NOT NULL,
             total REAL DEFAULT 0,
             status TEXT DEFAULT 'Прийнято',
+            order_date TEXT DEFAULT '',
+            delivery_method TEXT DEFAULT '',
+            payment_method TEXT DEFAULT '',
+            comment TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -259,6 +263,10 @@ def _init_sqlite(cursor):
             items TEXT NOT NULL,
             total REAL DEFAULT 0,
             status TEXT DEFAULT 'Прийнято',
+            order_date TEXT DEFAULT '',
+            delivery_method TEXT DEFAULT '',
+            payment_method TEXT DEFAULT '',
+            comment TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -339,6 +347,10 @@ def init_db():
         _ensure_column(cursor, "cart", "discount_percent", "INTEGER DEFAULT 0")
         _ensure_column(cursor, "orders", "items", "TEXT DEFAULT ''")
         _ensure_column(cursor, "orders", "total", "REAL DEFAULT 0")
+        _ensure_column(cursor, "orders", "order_date", "TEXT DEFAULT ''")
+        _ensure_column(cursor, "orders", "delivery_method", "TEXT DEFAULT ''")
+        _ensure_column(cursor, "orders", "payment_method", "TEXT DEFAULT ''")
+        _ensure_column(cursor, "orders", "comment", "TEXT DEFAULT ''")
         _ensure_column(cursor, "orders", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
         _ensure_column(cursor, "reviews", "review_type", "TEXT DEFAULT 'bakery'")
         _ensure_column(cursor, "reviews", "product_id", "INTEGER DEFAULT NULL")
@@ -355,6 +367,10 @@ def init_db():
         _ensure_column(cursor, "cart", "discount_percent", "INTEGER DEFAULT 0")
         _ensure_column(cursor, "orders", "items", "TEXT DEFAULT ''")
         _ensure_column(cursor, "orders", "total", "REAL DEFAULT 0")
+        _ensure_column(cursor, "orders", "order_date", "TEXT DEFAULT ''")
+        _ensure_column(cursor, "orders", "delivery_method", "TEXT DEFAULT ''")
+        _ensure_column(cursor, "orders", "payment_method", "TEXT DEFAULT ''")
+        _ensure_column(cursor, "orders", "comment", "TEXT DEFAULT ''")
         _ensure_column(cursor, "orders", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
         _ensure_column(cursor, "reviews", "review_type", "TEXT DEFAULT 'bakery'")
         _ensure_column(cursor, "reviews", "product_id", "INTEGER DEFAULT NULL")

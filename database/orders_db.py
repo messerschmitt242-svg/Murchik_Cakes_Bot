@@ -10,27 +10,59 @@ STATUSES = [
 ]
 
 
-def create_order(user_id: int, name: str, phone: str, items: list[dict], total: float) -> int:
+def create_order(
+    user_id: int,
+    name: str,
+    phone: str,
+    items: list[dict],
+    total: float,
+    order_date: str = "",
+    delivery_method: str = "",
+    payment_method: str = "",
+    comment: str = "",
+) -> int:
     conn = get_conn()
     cursor = conn.cursor()
 
     if is_postgres():
         cursor.execute(
             """
-            INSERT INTO orders (user_id, name, phone, items, total, status)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO orders (user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
             """,
-            (user_id, name, phone, json.dumps(items, ensure_ascii=False), total, "Прийнято"),
+            (
+                user_id,
+                name,
+                phone,
+                json.dumps(items, ensure_ascii=False),
+                total,
+                "Прийнято",
+                order_date,
+                delivery_method,
+                payment_method,
+                comment,
+            ),
         )
         order_id = cursor.fetchone()["id"]
     else:
         cursor.execute(
             """
-            INSERT INTO orders (user_id, name, phone, items, total, status)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO orders (user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, name, phone, json.dumps(items, ensure_ascii=False), total, "Прийнято"),
+            (
+                user_id,
+                name,
+                phone,
+                json.dumps(items, ensure_ascii=False),
+                total,
+                "Прийнято",
+                order_date,
+                delivery_method,
+                payment_method,
+                comment,
+            ),
         )
         order_id = cursor.lastrowid
 
@@ -44,7 +76,7 @@ def get_user_orders(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         WHERE user_id = ?
         ORDER BY id DESC
@@ -61,7 +93,7 @@ def get_all_orders():
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         ORDER BY id DESC
         """
@@ -76,7 +108,7 @@ def get_active_orders():
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         WHERE status != 'Завершено'
         ORDER BY id DESC
@@ -92,7 +124,7 @@ def get_order(order_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         WHERE id = ?
         """,
@@ -139,3 +171,30 @@ def format_items(raw_items: str) -> str:
             line += f"\n  промо: {item.get('promo_code')} (-{item.get('discount_percent', 0)}%)"
         result.append(line)
     return "\n".join(result)
+
+
+def _row_value(row, key: str, default=""):
+    try:
+        return row[key]
+    except Exception:
+        if isinstance(row, dict):
+            return row.get(key, default)
+        return default
+
+
+def format_order_details(order) -> str:
+    lines = []
+    order_date = _row_value(order, "order_date")
+    delivery_method = _row_value(order, "delivery_method")
+    payment_method = _row_value(order, "payment_method")
+    comment = _row_value(order, "comment")
+
+    if order_date:
+        lines.append(f"Дата замовлення: {order_date}")
+    if delivery_method:
+        lines.append(f"Доставка: {delivery_method}")
+    if payment_method:
+        lines.append(f"Оплата: {payment_method}")
+    if comment:
+        lines.append(f"Коментар: {comment}")
+    return "\n".join(lines)
