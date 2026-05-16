@@ -129,6 +129,19 @@ const I18N = {
 const $ = (id) => document.getElementById(id);
 const tr = (key) => (I18N[state.lang] || I18N.ua)[key] || key;
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
 function setText() {
   $("heroTitle").textContent = tr("heroTitle");
   $("heroText").textContent = tr("heroText");
@@ -162,6 +175,26 @@ function renderProductSkeletons(container = $("products"), count = 6) {
       <div class="skeleton-price"></div>
     </article>
   `).join("");
+}
+
+function renderDetailSkeleton() {
+  const modalContent = $("modalContent");
+  if (!modalContent) return;
+  modalContent.innerHTML = `
+    <div class="detail-skeleton">
+      <div class="skeleton-detail-img"></div>
+      <div class="skeleton-thumb-row">
+        <div class="skeleton-thumb"></div>
+        <div class="skeleton-thumb"></div>
+        <div class="skeleton-thumb"></div>
+      </div>
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line tiny"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-price"></div>
+    </div>
+  `;
 }
 
 function waitForInitialImages(limit = 6, timeout = 2500) {
@@ -357,7 +390,7 @@ function renderProducts(products, container) {
 
   container.innerHTML = products.map(p => `
     <article class="card">
-      <button class="image-button" onclick="openProduct(${p.id})" aria-label="${tr("view")}">
+      <button class="image-button" data-action="open-product" data-product-id="${p.id}" aria-label="${tr("view")}">
         ${imageMarkup(p, "card-img", "label")}
       </button>
       <h3>${localizedProductName(p)}</h3>
@@ -366,46 +399,105 @@ function renderProducts(products, container) {
       <div class="price">${Number(p.price || 0).toFixed(2)} zł</div>
       ${p.portion ? `<div class="muted">📦 ${tr("portion")}: ${p.portion}</div>` : ""}
       <div class="actions">
-        <button onclick="addToCart(${p.id})">🛒 ${tr("add")}</button>
+        <button data-action="add-to-cart" data-product-id="${p.id}">🛒 ${tr("add")}</button>
       </div>
     </article>
   `).join("");
 }
 
 async function openProduct(id) {
-  const p = await api(`/api/products/${id}?user_id=${state.userId}`);
-  const reviews = await api(`/api/reviews/product/${id}?limit=5`);
-
-  const gallery = ((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean);
-  const mainPhoto = gallery[0] || productImageUrl(p, "photo");
-
-  $("modalContent").innerHTML = `
-    <img id="detailMainImage" class="detail-img loading-img" src="${mainPhoto}" alt="" decoding="async" onload="this.classList.remove('loading-img')" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))">
-    ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" onclick="selectProductPhoto('${src.replaceAll("'", "\\'")}', this)"><img src="${src}" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
-    <h2>${localizedProductName(p)}</h2>
-    <p class="muted">${renderStars(p.rating)}</p>
-    <p>${localizedProductDescription(p)}</p>
-    <h3>${Number(p.price || 0).toFixed(2)} zł</h3>
-    ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
-    <div class="actions detail-actions">
-      <button onclick="addToCart(${p.id})">🛒 ${tr("add")}</button>
-      <button class="secondary" onclick="toggleFavorite(${p.id})">${p.is_favorite ? "💔 " + tr("removeFavorite") : "❤️ " + tr("favorite")}</button>
-    </div>
-    <hr class="reviews-divider">
-    <h3 class="reviews-title">💬 ${tr("productReviews")}</h3>
-    <div>${renderReviews(reviews)}</div>  `;
   $("modal").classList.remove("hidden");
+  renderDetailSkeleton();
+
+  try {
+    const [p, reviews] = await Promise.all([
+      api(`/api/products/${id}?user_id=${state.userId}`),
+      api(`/api/reviews/product/${id}?limit=5`),
+    ]);
+
+    const gallery = ((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean);
+    const mainPhoto = gallery[0] || productImageUrl(p, "photo");
+
+    $("modalContent").innerHTML = `
+      ${mainPhoto
+        ? `<div class="detail-image-wrap loading-img"><img id="detailMainImage" class="detail-img" src="${escapeAttr(mainPhoto)}" alt="" decoding="async" onload="this.parentElement.classList.remove('loading-img')" onerror="this.parentElement.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))"></div>`
+        : `<div class="detail-img">🍰</div>`}
+      ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" data-action="select-photo" data-src="${escapeAttr(src)}"><img src="${escapeAttr(src)}" loading="lazy" decoding="async" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
+      <h2>${escapeHtml(localizedProductName(p))}</h2>
+      <p class="muted">${renderStars(p.rating)}</p>
+      <p>${escapeHtml(localizedProductDescription(p))}</p>
+      <h3>${Number(p.price || 0).toFixed(2)} zł</h3>
+      ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${escapeHtml(p.portion)}</p>` : ""}
+      <div class="actions detail-actions">
+        <button data-action="add-to-cart" data-product-id="${p.id}">🛒 ${tr("add")}</button>
+        <button class="secondary" data-action="toggle-favorite" data-product-id="${p.id}">${p.is_favorite ? "💔 " + tr("removeFavorite") : "❤️ " + tr("favorite")}</button>
+      </div>
+      <hr class="reviews-divider">
+      <h3 class="reviews-title">💬 ${tr("productReviews")}</h3>
+      <div>${renderReviews(reviews)}</div>
+    `;
+  } catch (e) {
+    $("modalContent").innerHTML = `<div class="empty">❌ ${escapeHtml(e.message || "Loading error")}</div>`;
+  }
 }
 
 
 function selectProductPhoto(src, button) {
   const main = $("detailMainImage");
-  if (main) main.src = src;
+  const wrap = main?.parentElement;
+  if (main) {
+    if (wrap) wrap.classList.add("loading-img");
+    main.onload = () => wrap?.classList.remove("loading-img");
+    main.onerror = () => {
+      if (wrap) wrap.replaceWith(Object.assign(document.createElement("div"), { className: "detail-img", textContent: "🍰" }));
+    };
+    main.src = src;
+  }
   document.querySelectorAll(".thumb-button").forEach(btn => btn.classList.remove("active"));
   if (button) button.classList.add("active");
 }
 
 $("closeModal").addEventListener("click", () => $("modal").classList.add("hidden"));
+
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+
+  if (action === "open-product") {
+    e.preventDefault();
+    await openProduct(Number(btn.dataset.productId));
+    return;
+  }
+
+  if (action === "add-to-cart") {
+    e.preventDefault();
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = "⏳";
+    try {
+      await addToCart(Number(btn.dataset.productId));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+    return;
+  }
+
+  if (action === "toggle-favorite") {
+    e.preventDefault();
+    await toggleFavorite(Number(btn.dataset.productId));
+    await openProduct(Number(btn.dataset.productId));
+    return;
+  }
+
+  if (action === "select-photo") {
+    e.preventDefault();
+    selectProductPhoto(btn.dataset.src, btn);
+  }
+});
 
 async function addToCart(productId) {
   await api("/api/cart/add", {
