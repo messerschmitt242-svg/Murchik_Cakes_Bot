@@ -30,7 +30,7 @@ from utils_translation import translate_product_name, translate_description, tra
 from database.orders_db import format_items
 from config import BOT_TOKEN
 
-app = FastAPI(title="Murchik Cakes API", version="3.2.0")
+app = FastAPI(title="Murchik Cakes API", version="3.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,12 +108,24 @@ def _rating(product_id: int):
     }
 
 
+def _miniapp_image_url(src: str) -> str:
+    if not src:
+        return ""
+    if src.startswith("http://") or src.startswith("https://") or src.startswith("/"):
+        return src
+    return f"/api/telegram-photo?file_id={quote(src)}"
+
 def _localized_product(product: dict, user_id: int):
     if not product:
         return None
 
+    photos = product.get("photos") or []
+    label_image = product.get("label_image") or ""
+
     return {
         **product,
+        "label_image_url": _miniapp_image_url(label_image),
+        "photo_urls": [_miniapp_image_url(photo) for photo in photos if photo],
         "display_name": translate_product_name(product["name"], user_id, product.get("translations")),
         "display_description": translate_description(product["description"], user_id, product.get("translations")),
         "is_favorite": is_favorite_db(user_id, product["id"]) if user_id else False,
@@ -141,7 +153,7 @@ def _localized_order_items(raw_items: str, user_id: int):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "version": "3.2.0"}
+    return {"ok": True, "version": "3.3.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
 
 
 @app.get("/api/bootstrap/{user_id}")
@@ -191,7 +203,7 @@ def telegram_photo(file_id: str):
 
     try:
         conn = http.client.HTTPSConnection("api.telegram.org", timeout=15)
-        conn.request("GET", f"/bot{BOT_TOKEN}/getFile?file_id={quote(file_id)}")
+        conn.request("GET", f"/bot{BOT_TOKEN}/getFile?file_id={quote(file_id, safe='')}")
         resp = conn.getresponse()
         payload = resp.read()
         conn.close()

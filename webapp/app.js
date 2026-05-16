@@ -138,14 +138,20 @@ function firstPhoto(product) {
 
 function imageUrl(src) {
   if (!src) return "";
-  if (src.startsWith("http")) return src;
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) return src;
   return `/api/telegram-photo?file_id=${encodeURIComponent(src)}`;
 }
 
+function productImageUrl(product, mode = "label") {
+  if (mode === "label") {
+    return product.label_image_url || imageUrl(product.label_image || firstPhoto(product));
+  }
+  return (product.photo_urls && product.photo_urls.length ? product.photo_urls[0] : "") || imageUrl(firstPhoto(product));
+}
+
 function imageMarkup(product, cls = "card-img", mode = "label") {
-  const src = mode === "label" ? (product.label_image || firstPhoto(product)) : firstPhoto(product);
-  const url = imageUrl(src);
-  if (url) return `<img class="${cls}" src="${url}" alt="">`;
+  const url = productImageUrl(product, mode);
+  if (url) return `<img class="${cls}" src="${url}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'${cls}',textContent:'🍰'}))">`;
   return `<div class="${cls}">🍰</div>`;
 }
 
@@ -245,7 +251,7 @@ async function openProduct(id) {
 
   $("modalContent").innerHTML = `
     ${imageMarkup(p, "detail-img", "photo")}
-    ${p.photos && p.photos.length > 1 ? `<div class="photo-strip">${p.photos.filter(Boolean).map(src => `<img src="${imageUrl(src)}">`).join("")}</div>` : ""}
+    ${((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean).length > 1 ? `<div class="photo-strip">${((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean).map(src => `<img src="${src}" onerror="this.style.display='none'">`).join("")}</div>` : ""}
     <h2>${p.display_name || p.name}</h2>
     <p class="muted">${renderStars(p.rating)}</p>
     ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
