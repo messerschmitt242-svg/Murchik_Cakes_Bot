@@ -154,6 +154,37 @@ function imageMarkup(product, cls = "card-img", mode = "label") {
   return `<div class="${cls}">🍰</div>`;
 }
 
+
+function localizedProductName(product) {
+  const fromTranslations = product.translations?.[state.lang]?.name;
+  if (fromTranslations) return fromTranslations;
+  return product.display_name || product.name || "";
+}
+
+function localizedProductDescription(product) {
+  const fromTranslations = product.translations?.[state.lang]?.description;
+  if (fromTranslations) return fromTranslations;
+  return product.display_description || product.description || "";
+}
+
+function rerenderVisibleDataAfterLanguageChange() {
+  state.products = state.products.map(p => ({
+    ...p,
+    display_name: localizedProductName(p),
+    display_description: localizedProductDescription(p),
+  }));
+  renderProducts(state.products, $("products"));
+
+  if (!$("favoritesPanel")?.classList.contains("hidden")) {
+    loadFavorites();
+  }
+  if (!$("orders")?.classList.contains("active")) {
+    // Nothing.
+  } else {
+    loadOrders();
+  }
+}
+
 function renderStars(rating) {
   const avg = rating?.average;
   const count = rating?.count || 0;
@@ -188,11 +219,15 @@ $("langBtn").addEventListener("click", async () => {
   state.lang = order[(idx + 1) % order.length];
   localStorage.setItem("mc_lang", state.lang);
   setText();
+
+  // Fast language switch:
+  // Do not reload products/images from API. Images keep browser/API cache.
+  // Text is rerendered from already loaded translations.
+  rerenderVisibleDataAfterLanguageChange();
+
   try {
     await api("/api/language", { method: "POST", body: JSON.stringify({ user_id: state.userId, language: state.lang }) });
   } catch {}
-  loadProducts();
-  loadCart(false);
 });
 
 async function bootstrap() {
@@ -233,9 +268,9 @@ function renderProducts(products, container) {
       <button class="image-button" onclick="openProduct(${p.id})" aria-label="${tr("view")}">
         ${imageMarkup(p, "card-img", "label")}
       </button>
-      <h3>${p.display_name || p.name}</h3>
+      <h3>${localizedProductName(p)}</h3>
       <div class="rating">${renderStars(p.rating)}</div>
-      <p>${(p.display_description || p.description || "").slice(0, 86)}</p>
+      <p>${localizedProductDescription(p).slice(0, 86)}</p>
       <div class="price">${Number(p.price || 0).toFixed(2)} zł</div>
       ${p.portion ? `<div class="muted">📦 ${tr("portion")}: ${p.portion}</div>` : ""}
       <div class="actions">
@@ -255,9 +290,9 @@ async function openProduct(id) {
   $("modalContent").innerHTML = `
     <img id="detailMainImage" class="detail-img" src="${mainPhoto}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))">
     ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" onclick="selectProductPhoto('${src.replaceAll("'", "\\'")}', this)"><img src="${src}" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
-    <h2>${p.display_name || p.name}</h2>
+    <h2>${localizedProductName(p)}</h2>
     <p class="muted">${renderStars(p.rating)}</p>
-    <p>${p.display_description || p.description || ""}</p>
+    <p>${localizedProductDescription(p)}</p>
     <h3>${Number(p.price || 0).toFixed(2)} zł</h3>
     ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
     <div class="actions detail-actions">

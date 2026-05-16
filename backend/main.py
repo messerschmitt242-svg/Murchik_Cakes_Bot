@@ -2,6 +2,7 @@
 from pathlib import Path
 import http.client
 import json
+import time
 from urllib.parse import quote
 from typing import Optional
 
@@ -30,7 +31,7 @@ from utils_translation import translate_product_name, translate_description, tra
 from database.orders_db import format_items
 from config import BOT_TOKEN
 
-app = FastAPI(title="Murchik Cakes API", version="3.4.0")
+app = FastAPI(title="Murchik Cakes API", version="3.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +43,14 @@ app.add_middleware(
 
 ROOT = Path(__file__).resolve().parent.parent
 WEBAPP_DIR = ROOT / "webapp"
+
+# In-memory Telegram photo cache.
+# It avoids repeating Telegram getFile/download calls when Mini App rerenders,
+# especially after language switching.
+TELEGRAM_FILE_PATH_CACHE = {}
+TELEGRAM_IMAGE_CACHE = {}
+TELEGRAM_CACHE_TTL_SECONDS = 60 * 60 * 12
+
 
 
 class CartAddRequest(BaseModel):
@@ -166,7 +175,7 @@ def _completed_status(status: str) -> bool:
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "version": "3.4.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
+    return {"ok": True, "version": "3.5.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
 
 
 @app.get("/api/bootstrap/{user_id}")
@@ -210,22 +219,47 @@ def telegram_photo(file_id: str):
     """
     Telegram file_id is not a public image URL.
     This endpoint converts Telegram file_id into a browser-readable image response for Mini App.
+
+    Optimized:
+    - file_id -> file_path is cached in memory
+    - downloaded image bytes are cached in memory
+    - browser receives long Cache-Control headers
     """
     if not BOT_TOKEN:
         raise HTTPException(500, "BOT_TOKEN is not configured")
 
+    now = time.time()
+    cached_image = TELEGRAM_IMAGE_CACHE.get(file_id)
+    if cached_image and now - cached_image["time"] < TELEGRAM_CACHE_TTL_SECONDS:
+        return Response(
+            content=cached_image["content"],
+            media_type=cached_image["content_type"],
+            headers={
+                "Cache-Control": "public, max-age=604800, immutable",
+                "X-Murchik-Cache": "image-hit",
+            },
+        )
+
     try:
-        conn = http.client.HTTPSConnection("api.telegram.org", timeout=15)
-        conn.request("GET", f"/bot{BOT_TOKEN}/getFile?file_id={quote(file_id, safe='')}")
-        resp = conn.getresponse()
-        payload = resp.read()
-        conn.close()
+        cached_path = TELEGRAM_FILE_PATH_CACHE.get(file_id)
+        if cached_path and now - cached_path["time"] < TELEGRAM_CACHE_TTL_SECONDS:
+            file_path = cached_path["file_path"]
+        else:
+            conn = http.client.HTTPSConnection("api.telegram.org", timeout=15)
+            conn.request("GET", f"/bot{BOT_TOKEN}/getFile?file_id={quote(file_id, safe='')}")
+            resp = conn.getresponse()
+            payload = resp.read()
+            conn.close()
 
-        data = json.loads(payload.decode("utf-8"))
-        if not data.get("ok"):
-            raise HTTPException(404, "Telegram file not found")
+            data = json.loads(payload.decode("utf-8"))
+            if not data.get("ok"):
+                raise HTTPException(404, "Telegram file not found")
 
-        file_path = data["result"]["file_path"]
+            file_path = data["result"]["file_path"]
+            TELEGRAM_FILE_PATH_CACHE[file_id] = {
+                "file_path": file_path,
+                "time": now,
+            }
 
         file_conn = http.client.HTTPSConnection("api.telegram.org", timeout=30)
         file_conn.request("GET", f"/file/bot{BOT_TOKEN}/{file_path}")
@@ -234,11 +268,18 @@ def telegram_photo(file_id: str):
         content_type = file_resp.getheader("Content-Type") or "image/jpeg"
         file_conn.close()
 
+        TELEGRAM_IMAGE_CACHE[file_id] = {
+            "content": content,
+            "content_type": content_type,
+            "time": now,
+        }
+
         return Response(
             content=content,
             media_type=content_type,
             headers={
-                "Cache-Control": "public, max-age=86400"
+                "Cache-Control": "public, max-age=604800, immutable",
+                "X-Murchik-Cache": "miss",
             },
         )
     except HTTPException:
