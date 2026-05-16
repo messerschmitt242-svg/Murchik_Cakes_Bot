@@ -6,6 +6,7 @@ import time
 from urllib.parse import quote
 from typing import Optional
 import re
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -392,21 +393,23 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
     if promo_code and discount > 0:
         discount_text = f"\n🎟 Промокод: {promo_code} (-{discount_percent}%)\n💸 Знижка: {discount:.2f} zł\n💵 До знижки: {before:.2f} zł"
 
+    created_date = datetime.utcnow().date().isoformat()
     text = f"""🎂 Нове замовлення #{order_id}
 
 👤 Ім'я: {req.name.strip()}
 📞 Телефон: {_normalize_phone(req.phone)}
-📅 Дата: {req.date}
-🚚 Доставка: {req.delivery_method}
+📊 Статус: Прийнято
+📅 Дата замовлення: {created_date}
+
+📅 На коли: {req.date}
+🚚 Спосіб доставки: {req.delivery_method}
 💳 Оплата: {req.payment_method}
+💰 Разом: {total:.2f} zł
 💬 Коментар: {req.comment.strip() or '—'}
 
-🧁 Замовлення:
+────────────
 {_format_order_items_for_admin(items)}
-{discount_text}
-
-💰 Разом: {total:.2f} zł
-📊 Статус: Прийнято"""
+{discount_text}"""
 
     success = 0
     for admin_id in ADMIN_IDS:

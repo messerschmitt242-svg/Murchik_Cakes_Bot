@@ -13,8 +13,9 @@ from database.orders_db import (
     cancel_order,
     can_cancel_order,
     format_items,
+    format_items_section,
     next_status,
-    format_order_details,
+    format_order_meta,
 )
 from database.custom_orders_db import (
     get_active_custom_orders,
@@ -30,12 +31,9 @@ def _order_text(order) -> str:
 
 👤 Клієнт: {order['name']}
 📞 Телефон: {order['phone']}
-🕒 Створено: {order['created_at']}
-📊 Статус: {order['status']}
-💰 Сума: {float(order['total'] or 0):.2f} zł
-{format_order_details(order)}
+{format_order_meta(order)}
 
-{format_items(order['items'])}
+{format_items_section(order['items'])}
 """
 
 
@@ -64,10 +62,9 @@ async def list_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🆔 ID: {order['id']}
 👤 Клієнт: {order['name']}
 📞 Телефон: {order['phone']}
-📊 Статус: {order['status']}
-💰 Сума: {float(order['total'] or 0):.2f} zł
-{format_order_details(order)}
-{format_items(order['items'])}
+{format_order_meta(order)}
+
+{format_items_section(order['items'])}
 ------------------
 """
 

@@ -360,3 +360,19 @@ img.loading-img{opacity:.35}
   background:#f3d7d0;
   color:#7b2621;
 }
+
+.order-separator {
+  height: 1px;
+  margin: 12px 0 10px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.order-items-list {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.order-spaced-line {
+  margin-top: 8px;
+}

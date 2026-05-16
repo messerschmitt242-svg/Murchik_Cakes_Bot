@@ -163,21 +163,22 @@ function orderSummaryHtml({ name, phone, date, deliveryMethod, paymentMethod, co
       <b>${Number(i.final_subtotal || i.subtotal || 0).toFixed(2)} zł</b>
     </div>
   `).join("");
+  const today = new Date().toISOString().slice(0, 10);
 
   return `
     <div class="order-confirm-card">
       <h2>📦 ${tr("orders")}</h2>
       <div class="summary-line">📊 <span>${tr("status")}</span><b>Прийнято</b></div>
-      <div class="summary-line">👤 <span>${tr("name")}</span><b>${name}</b></div>
-      <div class="summary-line">📞 <span>${tr("phone")}</span><b>${normalizePhone(phone)}</b></div>
-      <div class="summary-line">📅 <span>${tr("date")}</span><b>${date}</b></div>
+      <div class="summary-line">📅 <span>Дата замовлення</span><b>${today}</b></div>
+      <div class="summary-line order-spaced-line">📅 <span>На коли</span><b>${date}</b></div>
       <div class="summary-line">🚚 <span>${tr("deliveryMethod")}</span><b>${deliveryMethod}</b></div>
       <div class="summary-line">💳 <span>${tr("paymentMethod")}</span><b>${paymentMethod}</b></div>
-      ${comment ? `<div class="summary-line">💬 <span>${tr("comment")}</span><b>${comment}</b></div>` : ""}
-      <div class="summary-items">${itemsHtml}</div>
       ${promo ? `<div class="summary-line">🎟 <span>${tr("promo")}</span><b>${promo.code} −${promo.percent}%</b></div>` : ""}
       ${Number(cart.total_discount || 0) > 0 ? `<div class="summary-line">💸 <span>Знижка</span><b>${Number(cart.total_discount).toFixed(2)} zł</b></div>` : ""}
       <div class="summary-total">💰 ${tr("total")}: ${Number(cart.total || 0).toFixed(2)} zł</div>
+      ${comment ? `<div class="summary-line">💬 <span>${tr("comment")}</span><b>${comment}</b></div>` : ""}
+      <div class="order-separator"></div>
+      <div class="summary-items">${itemsHtml}</div>
     </div>
   `;
 }
@@ -696,6 +697,24 @@ async function confirmCheckout(payload) {
 }
 
 
+function formatOrderCreatedDate(value) {
+  if (!value) return "";
+  const raw = String(value).trim();
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  const d = new Date(raw);
+  if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return raw;
+}
+
+function renderOrderItems(items) {
+  if (!items || !items.length) return "";
+  return `
+    <div class="order-separator"></div>
+    <div class="order-items-list">${items.map(i => `<div>${i.display_name || i.name} ×${i.qty}</div>`).join("")}</div>
+  `;
+}
+
 async function loadOrders() {
   const data = await api(`/api/orders/${state.userId}`);
   const orders = [...(data.orders || []), ...(data.custom_orders || [])].sort((a,b) => b.id - a.id);
@@ -703,13 +722,14 @@ async function loadOrders() {
     <div class="order-row">
       <strong>${o.type === "custom" ? "🎂" : "📦"} #${o.id}</strong>
       <div class="muted">📊 ${tr("status")}: ${o.status || ""}</div>
-      ${o.total ? `<div>💰 ${tr("total")}: ${Number(o.total).toFixed(2)} zł</div>` : ""}
-      ${o.order_date ? `<div class="muted">📅 ${tr("date")}: ${o.order_date}</div>` : ""}
+      ${o.created_at ? `<div class="muted">📅 Дата замовлення: ${formatOrderCreatedDate(o.created_at)}</div>` : ""}
+      ${o.order_date ? `<div class="muted order-spaced-line">📅 На коли: ${o.order_date}</div>` : ""}
       ${o.delivery_method ? `<div class="muted">🚚 ${tr("deliveryMethod")}: ${o.delivery_method}</div>` : ""}
       ${o.payment_method ? `<div class="muted">💳 ${tr("paymentMethod")}: ${o.payment_method}</div>` : ""}
+      ${o.total ? `<div>💰 ${tr("total")}: ${Number(o.total).toFixed(2)} zł</div>` : ""}
       ${o.comment ? `<div class="muted">💬 ${tr("comment")}: ${o.comment}</div>` : ""}
-      ${o.items ? `<div class="muted">🧁 ${o.items.map(i => `${i.display_name || i.name} ×${i.qty}`).join("<br>")}</div>` : ""}
-      ${o.description ? `<div class="muted">📝 ${o.description}</div>` : ""}
+      ${o.type === "regular" ? renderOrderItems(o.items) : ""}
+      ${o.description ? `<div class="order-separator"></div><div class="muted">📝 ${o.description}</div>` : ""}
       ${o.type === "regular" && canRequestOrderCancel(o.status) ? `<button class="secondary cancel-order-btn" onclick='showCancelOrderInfo(${JSON.stringify(o).replaceAll("'", "&apos;")})'>❌ ${tr("cancelOrder")}</button>` : ""}
       ${o.type === "regular" && isCompletedOrder(o.status) && o.items && o.items.length ? `<button class="primary" onclick='startOrderReview(${JSON.stringify(o).replaceAll("'", "&apos;")})'>💬 ${tr("leaveOrderReview")}</button>` : ""}
     </div>

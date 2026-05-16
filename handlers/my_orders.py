@@ -2,7 +2,7 @@ import json
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from database.orders_db import get_user_orders, get_order, format_order_details, can_cancel_order
+from database.orders_db import get_user_orders, get_order, format_order_meta, format_items_section, can_cancel_order
 from database.custom_orders_db import get_user_custom_orders
 from handlers.pickup import PICKUP_READY_STATUS
 from locales import tr
@@ -66,12 +66,12 @@ async def my_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
 
     for order in orders:
+        order_meta = format_order_meta(dict(order) | {"status": _status(user_id, order["status"])})
         text += f"""
 {tr(user_id, "order_label")} #{order['id']}
-📊 {tr(user_id, "status_label")} {_status(user_id, order['status'])}
-💰 {tr(user_id, "sum_label")} {float(order['total'] or 0):.2f} zł
-{format_order_details(order)}
+{order_meta}
 
+────────────
 {_format_items_for_user(order['items'], user_id)}
 ------------------
 """

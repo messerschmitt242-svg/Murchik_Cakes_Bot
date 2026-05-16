@@ -198,6 +198,47 @@ def _row_value(row, key: str, default=""):
         return default
 
 
+
+
+def format_created_date(order) -> str:
+    created_at = str(_row_value(order, "created_at") or "").strip()
+    if not created_at:
+        return ""
+    if len(created_at) >= 10 and created_at[4:5] == "-" and created_at[7:8] == "-":
+        return created_at[:10]
+    return created_at
+
+
+def format_order_meta(order) -> str:
+    lines = []
+    status = _row_value(order, "status")
+    created_date = format_created_date(order)
+    order_date = _row_value(order, "order_date")
+    delivery_method = _row_value(order, "delivery_method")
+    payment_method = _row_value(order, "payment_method")
+    total = float(_row_value(order, "total", 0) or 0)
+    comment = _row_value(order, "comment")
+
+    if status:
+        lines.append(f"📊 Статус: {status}")
+    if created_date:
+        lines.append(f"📅 Дата замовлення: {created_date}")
+    if order_date:
+        lines.append("")
+        lines.append(f"📅 На коли: {order_date}")
+    if delivery_method:
+        lines.append(f"🚚 Спосіб доставки: {delivery_method}")
+    if payment_method:
+        lines.append(f"💳 Оплата: {payment_method}")
+    lines.append(f"💰 Разом: {total:.2f} zł")
+    if comment:
+        lines.append(f"💬 Коментар: {comment}")
+    return "\n".join(lines)
+
+
+def format_items_section(raw_items: str) -> str:
+    return "────────────\n" + format_items(raw_items)
+
 def format_order_details(order) -> str:
     lines = []
     order_date = _row_value(order, "order_date")
@@ -206,9 +247,9 @@ def format_order_details(order) -> str:
     comment = _row_value(order, "comment")
 
     if order_date:
-        lines.append(f"📅 Дата: {order_date}")
+        lines.append(f"📅 На коли: {order_date}")
     if delivery_method:
-        lines.append(f"🚚 Доставка: {delivery_method}")
+        lines.append(f"🚚 Спосіб доставки: {delivery_method}")
     if payment_method:
         lines.append(f"💳 Оплата: {payment_method}")
     if comment:
