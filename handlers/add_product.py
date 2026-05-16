@@ -36,9 +36,23 @@ async def add_product_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         return ConversationHandler.END
 
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        chat_id = query.message.chat_id
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
+
+        async def send(text, reply_markup=None):
+            return await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    else:
+        send = update.message.reply_text
+
     context.user_data["add_product"] = {"photos": []}
     print("ADD_DESSERT_FLOW_START")
-    await update.message.reply_text(
+    await send(
         "Надішліть живі фото товару 🍰\n\nМожна надіслати декілька фото. Після останнього фото натисніть кнопку нижче.",
         reply_markup=_finish_keyboard(),
     )

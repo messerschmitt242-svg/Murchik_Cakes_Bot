@@ -8,6 +8,7 @@ from handlers.cleanup import delete_callback_message
 from handlers.home import HOME_BUTTON_TEXT
 from locales import tr
 from handlers.admin_notify import notify_admins_text, notify_admins_photo, admin_contact_keyboard
+from utils_dates import min_order_date_text, validate_order_date
 
 CUSTOM_NAME = 800
 CUSTOM_PHONE = 801
@@ -187,7 +188,7 @@ async def custom_get_description(update: Update, context: ContextTypes.DEFAULT_T
     context.user_data.setdefault("custom_order", {})["description"] = description
 
     await update.message.reply_text(
-        tr(update.effective_user.id, "custom_date_prompt")
+        tr(update.effective_user.id, "custom_date_prompt") + f"\n\nНайраніша доступна дата: {min_order_date_text()}"
     )
 
     return CUSTOM_DATE
@@ -196,11 +197,12 @@ async def custom_get_description(update: Update, context: ContextTypes.DEFAULT_T
 async def custom_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     date = update.message.text.strip()
 
-    if not date:
-        await update.message.reply_text(tr(update.effective_user.id, "date_empty"))
+    ok, message, parsed_date = validate_order_date(date, required=True)
+    if not ok:
+        await update.message.reply_text(message)
         return CUSTOM_DATE
 
-    context.user_data.setdefault("custom_order", {})["date"] = date
+    context.user_data.setdefault("custom_order", {})["date"] = parsed_date.strftime("%Y-%m-%d")
 
     await update.message.reply_text(
         tr(update.effective_user.id, "custom_photo_prompt"),

@@ -61,3 +61,21 @@ def get_all_promos():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def delete_promo(code: str) -> bool:
+    code = code.strip().upper()
+    if not code:
+        return False
+
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM promo_codes WHERE code = ?", (code,))
+    deleted = cursor.rowcount > 0
+    cursor.execute(
+        "UPDATE cart SET promo_code = '', discount_percent = 0 WHERE promo_code = ?",
+        (code,),
+    )
+    conn.commit()
+    conn.close()
+    return deleted

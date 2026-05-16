@@ -2,17 +2,24 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
 from config import is_admin
-from database.promo_db import create_promo, get_all_promos
+from database.promo_db import create_promo, delete_promo, get_all_promos
 from handlers.cleanup import delete_callback_message
 
 PROMO_CODE_INPUT = 300
 PROMO_DISCOUNT_SELECT = 301
 
 
-def _start_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎟 Сгенерувати промокод", callback_data="promo_create")]
-    ])
+def _start_keyboard(promos=None):
+    keyboard = [[InlineKeyboardButton("🎟 Сгенерувати промокод", callback_data="promo_create")]]
+    promos = promos or []
+    for promo in promos:
+        keyboard.append([
+            InlineKeyboardButton(
+                f"🗑 {promo['code']} (-{promo['discount_percent']}%)",
+                callback_data=f"promo_delete_{promo['code']}",
+            )
+        ])
+    return InlineKeyboardMarkup(keyboard)
 
 
 def _discount_keyboard():
@@ -27,9 +34,16 @@ async def promo_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         return
 
+    promos = get_all_promos()
+    text = "Панель промокодів:"
+    if promos:
+        text += "\n\nНатисніть на промокод нижче, щоб видалити його."
+    else:
+        text += "\n\nПромокодів поки немає."
+
     await update.message.reply_text(
-        "Панель промокодів:",
-        reply_markup=_start_keyboard(),
+        text,
+        reply_markup=_start_keyboard(promos),
     )
 
 
@@ -128,3 +142,26 @@ async def promo_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"• {promo['code']} — -{promo['discount_percent']}% — {status}\n"
 
     await update.message.reply_text(text)
+
+
+async def promo_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(query.from_user.id):
+        return
+
+    code = query.data.replace("promo_delete_", "", 1).strip().upper()
+    deleted = delete_promo(code)
+    await delete_callback_message(query)
+
+    promos = get_all_promos()
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=(f"✅ Промокод {code} видалено." if deleted else f"❌ Промокод {code} не знайдено."),
+    )
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text="Панель промокодів:",
+        reply_markup=_start_keyboard(promos),
+    )

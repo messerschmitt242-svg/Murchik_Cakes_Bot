@@ -14,6 +14,7 @@ from handlers.product_translations import regenerate_translations
 from handlers.home import go_home, go_home_inline, HOME_BUTTON_TEXT
 from handlers.language import language_menu, set_language
 from handlers.pickup import pickup_info
+from handlers.admin_panel import admin_panel, admin_panel_callback
 
 from handlers.start import start
 from handlers.id import get_id
@@ -42,8 +43,20 @@ from handlers.promo import (
     promo_get_code,
     promo_choose_discount,
     promo_cancel,
+    promo_delete,
     PROMO_CODE_INPUT,
     PROMO_DISCOUNT_SELECT,
+)
+
+
+from handlers.update_photos import (
+    update_photos_start,
+    update_photos_choose_product,
+    update_photos_add_photo,
+    update_photos_finish,
+    update_photos_cancel,
+    UPDATE_PHOTOS_PRODUCT,
+    UPDATE_PHOTOS_UPLOAD,
 )
 
 from handlers.add_product import (
@@ -144,6 +157,7 @@ def build_app():
         entry_points=[
             MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start),
             CommandHandler("add_dessert", add_product_start),
+            CallbackQueryHandler(add_product_start, pattern="^admin_panel_add_product$"),
         ],
         states={
             ADD_PHOTO: [
@@ -160,6 +174,28 @@ def build_app():
         fallbacks=[
             CommandHandler("cancel", cancel_add_product),
             CallbackQueryHandler(cancel_add_product, pattern="^cancel_add_product$"),
+        ],
+        allow_reentry=True,
+    )
+
+    update_photos_handler = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex("^🖼 Оновити фото$"), update_photos_start),
+            CommandHandler("update_photos", update_photos_start),
+            CallbackQueryHandler(update_photos_start, pattern="^admin_panel_update_photos$"),
+        ],
+        states={
+            UPDATE_PHOTOS_PRODUCT: [
+                CallbackQueryHandler(update_photos_choose_product, pattern=r"^update_photos_product_\d+$"),
+            ],
+            UPDATE_PHOTOS_UPLOAD: [
+                MessageHandler(filters.PHOTO, update_photos_add_photo),
+                CallbackQueryHandler(update_photos_finish, pattern="^update_photos_finish$"),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", update_photos_cancel),
+            CallbackQueryHandler(update_photos_cancel, pattern="^update_photos_cancel$"),
         ],
         allow_reentry=True,
     )
@@ -267,6 +303,7 @@ def build_app():
 
     # Команды
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CommandHandler("id", get_id))
     app.add_handler(CommandHandler("orders", list_orders))
     app.add_handler(CommandHandler("set_status", set_status))
@@ -281,9 +318,11 @@ def build_app():
     # Адмінські приховані кнопки головного меню
     app.add_handler(MessageHandler(filters.Regex("^🗑 Видалити продукт$"), delete_product))
     app.add_handler(MessageHandler(filters.Regex("^🎟 Промокоди$"), promo_menu))
+    app.add_handler(MessageHandler(filters.Regex("^🛠 Адмін-панель$"), admin_panel))
 
     # Диалоги должны стоять выше обычных текстовых кнопок
     app.add_handler(add_product_handler)
+    app.add_handler(update_photos_handler)
     app.add_handler(checkout_handler)
     app.add_handler(cart_promo_handler)
     app.add_handler(promo_handler)
@@ -299,6 +338,8 @@ def build_app():
     app.add_handler(CallbackQueryHandler(delete_review_admin, pattern=r"^delete_review_\d+$"))
 
     # Inline-кнопки админки и удаления
+    app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern=r"^admin_panel_"))
+    app.add_handler(CallbackQueryHandler(promo_delete, pattern=r"^promo_delete_"))
     app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
     app.add_handler(CallbackQueryHandler(show_admin_order, pattern=r"^admin_order_\d+$"))
     app.add_handler(CallbackQueryHandler(show_admin_custom_order, pattern=r"^admin_custom_order_\d+$"))

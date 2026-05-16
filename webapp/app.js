@@ -23,6 +23,29 @@ const LANG_LABELS = {
   en: "EN 🇬🇧",
 };
 
+function minOrderDateISO() {
+  const d = new Date();
+  d.setDate(d.getDate() + 4);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function applyDateLimits() {
+  const minDate = minOrderDateISO();
+  ["orderDate", "customDate"].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.min = minDate;
+    if (!el.value) el.value = minDate;
+  });
+}
+
+function isAllowedOrderDate(value) {
+  return value && value >= minOrderDateISO();
+}
+
 function updateLangButton() {
   const btn = $("langBtn");
   if (btn) btn.textContent = LANG_LABELS[state.lang] || "🌐";
@@ -231,6 +254,7 @@ $("langBtn").addEventListener("click", async () => {
 });
 
 async function bootstrap() {
+  applyDateLimits();
   try {
     const data = await api(`/api/bootstrap/${state.userId}`);
     state.lang = data.language || state.lang;
@@ -400,7 +424,8 @@ $("checkoutBtn").addEventListener("click", async () => {
   const date = $("orderDate").value.trim();
   const comment = $("orderComment").value.trim();
 
-  if (!name || !phone) return toast(tr("required"));
+  if (!name || !phone || !date) return toast(tr("required"));
+  if (!isAllowedOrderDate(date)) return toast(`Дата має бути не раніше ${minOrderDateISO()}`);
 
   try {
     const res = await api("/api/orders", {
@@ -574,7 +599,8 @@ $("sendCustomBtn").addEventListener("click", async () => {
   const phone = $("customPhone").value.trim();
   const date = $("customDate").value.trim();
   const description = $("customDescription").value.trim();
-  if (!name || !phone || !description) return toast(tr("required"));
+  if (!name || !phone || !description || !date) return toast(tr("required"));
+  if (!isAllowedOrderDate(date)) return toast(`Дата має бути не раніше ${minOrderDateISO()}`);
 
   const res = await api("/api/custom-orders", {
     method: "POST",

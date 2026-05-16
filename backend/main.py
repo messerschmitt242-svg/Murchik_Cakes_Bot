@@ -30,6 +30,7 @@ from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
 from database.orders_db import format_items
 from config import BOT_TOKEN
+from utils_dates import min_order_date_text, validate_order_date
 
 app = FastAPI(title="Murchik Cakes API", version="3.5.0")
 
@@ -176,6 +177,11 @@ def _completed_status(status: str) -> bool:
 @app.get("/api/health")
 def health():
     return {"ok": True, "version": "3.5.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
+
+
+@app.get("/api/order-rules")
+def order_rules():
+    return {"min_lead_days": 4, "min_date": min_order_date_text()}
 
 
 @app.get("/api/bootstrap/{user_id}")
@@ -334,6 +340,10 @@ def cart_promo(req: CartPromoRequest):
 
 @app.post("/api/orders")
 def create_order_api(req: OrderRequest):
+    ok, message, _ = validate_order_date(req.date, required=True)
+    if not ok:
+        raise HTTPException(400, message)
+
     items, total, _, _ = get_cart_items_db(req.user_id)
     if not items:
         raise HTTPException(400, "Cart is empty")
@@ -393,6 +403,10 @@ def orders(user_id: int):
 
 @app.post("/api/custom-orders")
 def create_custom_order_api(req: CustomOrderRequest):
+    ok, message, _ = validate_order_date(req.date, required=True)
+    if not ok:
+        raise HTTPException(400, message)
+
     order_id = create_custom_order_db(
         user_id=req.user_id,
         name=req.name,

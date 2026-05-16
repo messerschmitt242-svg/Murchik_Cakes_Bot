@@ -170,6 +170,19 @@ def update_product_translations(product_id: int, translations: dict):
     conn.close()
 
 
+def update_product_photos(product_id: int, photos: list[str]) -> bool:
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE products SET photos = ? WHERE id = ?",
+        (json.dumps(photos, ensure_ascii=False), product_id),
+    )
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed
+
+
 def update_product_label(product_id: int, label_image: str):
     conn = get_conn()
     cursor = conn.cursor()
