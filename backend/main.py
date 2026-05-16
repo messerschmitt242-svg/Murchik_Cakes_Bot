@@ -5,6 +5,7 @@ import json
 import time
 from urllib.parse import quote
 from typing import Optional
+import re
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +30,7 @@ from database.reviews_db import add_review_db, get_product_reviews_db, get_produ
 from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
 from database.orders_db import format_items
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_IDS
 from utils_dates import min_order_date_text, validate_order_date
 
 app = FastAPI(title="Murchik Cakes API", version="3.5.0")
@@ -211,6 +212,11 @@ def products(user_id: int = Query(0), category: Optional[str] = None, q: str = "
             if q_lower in (p.get("display_name") or p.get("name") or "").lower()
             or q_lower in (p.get("display_description") or p.get("description") or "").lower()
         ]
+
+    # System sorting: desserts are always shown alphabetically by displayed name.
+    # Python compares the whole string, so if the first letter matches it naturally
+    # continues with the second, third, etc.
+    data.sort(key=lambda p: (p.get("display_name") or p.get("name") or "").casefold())
     return data
 
 
@@ -340,13 +346,98 @@ def cart_promo(req: CartPromoRequest):
     }
 
 
+def _normalize_phone(phone: str) -> str:
+    return re.sub(r"\D", "", phone or "")
+
+
+def _validate_customer_payload(name: str, phone: str, delivery_method: str = "", payment_method: str = ""):
+    if not (name or "").strip():
+        raise HTTPException(400, "Name is required")
+
+    normalized_phone = _normalize_phone(phone)
+    if len(normalized_phone) != 9:
+        raise HTTPException(400, "Phone must contain exactly 9 digits, for example 504 123 456")
+
+    if delivery_method is not None and not str(delivery_method).strip():
+        raise HTTPException(400, "Choose delivery method")
+    if payment_method is not None and not str(payment_method).strip():
+        raise HTTPException(400, "Choose payment method")
+
+    return normalized_phone
+
+
+def _format_order_items_for_admin(items: list[dict]) -> str:
+    lines = []
+    for item in items:
+        lines.append(
+            f"• {item.get('name', 'Товар')} ×{item.get('qty', 1)} — "
+            f"{float(item.get('final_subtotal', item.get('subtotal', 0)) or 0):.2f} zł"
+        )
+    return "\n".join(lines) or "—"
+
+
+def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict], total: float, before: float, discount: float) -> int:
+    if not BOT_TOKEN or not ADMIN_IDS:
+        return 0
+
+    promo_code = ""
+    discount_percent = 0
+    for item in items:
+        if item.get("promo_code"):
+            promo_code = item.get("promo_code") or ""
+            discount_percent = int(item.get("discount_percent") or 0)
+            break
+
+    discount_text = ""
+    if promo_code and discount > 0:
+        discount_text = f"\n🎟 Промокод: {promo_code} (-{discount_percent}%)\n💸 Знижка: {discount:.2f} zł\n💵 До знижки: {before:.2f} zł"
+
+    text = f"""🎂 Нове замовлення #{order_id}
+
+👤 Ім'я: {req.name.strip()}
+📞 Телефон: {_normalize_phone(req.phone)}
+📅 Дата: {req.date}
+🚚 Доставка: {req.delivery_method}
+💳 Оплата: {req.payment_method}
+💬 Коментар: {req.comment.strip() or '—'}
+
+🧁 Замовлення:
+{_format_order_items_for_admin(items)}
+{discount_text}
+
+💰 Разом: {total:.2f} zł
+📊 Статус: Прийнято"""
+
+    success = 0
+    for admin_id in ADMIN_IDS:
+        try:
+            conn = http.client.HTTPSConnection("api.telegram.org", timeout=12)
+            body = json.dumps({"chat_id": admin_id, "text": text}, ensure_ascii=False).encode("utf-8")
+            conn.request(
+                "POST",
+                f"/bot{BOT_TOKEN}/sendMessage",
+                body=body,
+                headers={"Content-Type": "application/json"},
+            )
+            resp = conn.getresponse()
+            resp.read()
+            conn.close()
+            if 200 <= resp.status < 300:
+                success += 1
+        except Exception as exc:
+            print(f"ADMIN NOTIFY ERROR {admin_id}: {exc}")
+    return success
+
+
 @app.post("/api/orders")
 def create_order_api(req: OrderRequest):
     ok, message, _ = validate_order_date(req.date, required=True)
     if not ok:
         raise HTTPException(400, message)
 
-    items, total, _, _ = get_cart_items_db(req.user_id)
+    normalized_phone = _validate_customer_payload(req.name, req.phone, req.delivery_method, req.payment_method)
+
+    items, total, before, discount = get_cart_items_db(req.user_id)
     if not items:
         raise HTTPException(400, "Cart is empty")
 
@@ -360,8 +451,8 @@ def create_order_api(req: OrderRequest):
 
     order_id = create_order(
         user_id=req.user_id,
-        name=req.name,
-        phone=req.phone,
+        name=req.name.strip(),
+        phone=normalized_phone,
         items=items,
         total=total,
         order_date=req.date,
@@ -370,10 +461,12 @@ def create_order_api(req: OrderRequest):
         comment=req.comment,
     )
     clear_cart_db(req.user_id)
+    admin_notified = _notify_admins_new_order(order_id, req, items, total, before, discount)
     return {
         "id": order_id,
         "status": "Прийнято",
         "total": total,
+        "admin_notified": admin_notified,
     }
 
 
@@ -424,10 +517,12 @@ def create_custom_order_api(req: CustomOrderRequest):
     if not ok:
         raise HTTPException(400, message)
 
+    normalized_phone = _validate_customer_payload(req.name, req.phone, None, None)
+
     order_id = create_custom_order_db(
         user_id=req.user_id,
-        name=req.name,
-        phone=req.phone,
+        name=req.name.strip(),
+        phone=normalized_phone,
         product_id=req.product_id,
         product_name=req.product_name,
         description=req.description,

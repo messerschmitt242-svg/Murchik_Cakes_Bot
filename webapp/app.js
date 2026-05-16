@@ -129,11 +129,66 @@ const I18N = {
 const $ = (id) => document.getElementById(id);
 const tr = (key) => (I18N[state.lang] || I18N.ua)[key] || key;
 
+function sortProductsInPlace(products) {
+  products.sort((a, b) => localizedProductName(a).localeCompare(localizedProductName(b), undefined, { sensitivity: "base" }));
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function validateOrderForm({ name, phone, date, deliveryMethod, paymentMethod }) {
+  if (!name) return tr("required");
+  const cleanPhone = normalizePhone(phone);
+  if (!cleanPhone) return tr("required");
+  if (cleanPhone.length !== 9) return "Телефон має містити рівно 9 цифр. Приклад: 504 123 456";
+  if (!date) return tr("required");
+  if (!isAllowedOrderDate(date)) return `Дата має бути не раніше ${minOrderDateISO()}`;
+  if (!deliveryMethod) return tr("required");
+  if (!paymentMethod) return tr("required");
+  return "";
+}
+
+function uniqueCartPromo(cart = state.cart) {
+  const item = (cart.items || []).find(i => i.promo_code);
+  return item ? { code: item.promo_code, percent: Number(item.discount_percent || 0) } : null;
+}
+
+function orderSummaryHtml({ name, phone, date, deliveryMethod, paymentMethod, comment }) {
+  const cart = state.cart || { items: [], total: 0 };
+  const promo = uniqueCartPromo(cart);
+  const itemsHtml = (cart.items || []).map(i => `
+    <div class="summary-item">
+      <span>${i.display_name || i.name} ×${i.qty}</span>
+      <b>${Number(i.final_subtotal || i.subtotal || 0).toFixed(2)} zł</b>
+    </div>
+  `).join("");
+
+  return `
+    <div class="order-confirm-card">
+      <h2>📦 ${tr("orders")}</h2>
+      <div class="summary-line">📊 <span>${tr("status")}</span><b>Прийнято</b></div>
+      <div class="summary-line">👤 <span>${tr("name")}</span><b>${name}</b></div>
+      <div class="summary-line">📞 <span>${tr("phone")}</span><b>${normalizePhone(phone)}</b></div>
+      <div class="summary-line">📅 <span>${tr("date")}</span><b>${date}</b></div>
+      <div class="summary-line">🚚 <span>${tr("deliveryMethod")}</span><b>${deliveryMethod}</b></div>
+      <div class="summary-line">💳 <span>${tr("paymentMethod")}</span><b>${paymentMethod}</b></div>
+      ${comment ? `<div class="summary-line">💬 <span>${tr("comment")}</span><b>${comment}</b></div>` : ""}
+      <div class="summary-items">${itemsHtml}</div>
+      ${promo ? `<div class="summary-line">🎟 <span>${tr("promo")}</span><b>${promo.code} −${promo.percent}%</b></div>` : ""}
+      ${Number(cart.total_discount || 0) > 0 ? `<div class="summary-line">💸 <span>Знижка</span><b>${Number(cart.total_discount).toFixed(2)} zł</b></div>` : ""}
+      <div class="summary-total">💰 ${tr("total")}: ${Number(cart.total || 0).toFixed(2)} zł</div>
+    </div>
+  `;
+}
+
 function setText() {
   $("heroTitle").textContent = tr("heroTitle");
   $("heroText").textContent = tr("heroText");
   document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = tr(el.dataset.i18n));
   document.querySelectorAll("[data-placeholder]").forEach(el => el.placeholder = tr(el.dataset.placeholder));
+  if ($("orderPhone")) $("orderPhone").placeholder = "504 123 456";
+  if ($("customPhone")) $("customPhone").placeholder = "504 123 456";
   const loaderText = $("loaderText");
   if (loaderText) loaderText.textContent = LOADING_TEXT[state.lang] || LOADING_TEXT.ua;
   updateLangButton();
@@ -346,6 +401,7 @@ async function loadProducts(showSkeleton = true) {
   if (state.category) qs.set("category", state.category);
   if (state.search) qs.set("q", state.search);
   state.products = await api(`/api/products?${qs}`);
+  sortProductsInPlace(state.products);
   renderProducts(state.products, container);
 }
 
@@ -371,7 +427,7 @@ function renderProductCartAction(productId) {
     <div class="inline-cart-controls" data-product-id="${productId}">
       ${minusButton}
       <span class="inline-cart-count">${qty}</span>
-      <button class="cart-control-btn" onclick="changeQty(${productId}, 1)">+</button>
+      <button class="cart-control-btn plus" onclick="changeQty(${productId}, 1)">+</button>
     </div>
   `;
 }
@@ -492,27 +548,34 @@ function renderCart(data) {
     return;
   }
 
+  const promo = uniqueCartPromo(data);
+  const promoBlock = `
+    <div class="cart-promo-block">
+      <input id="promo_order" placeholder="${tr("promo")}" style="padding:9px;margin:0" value="${promo?.code || ""}">
+      <button class="secondary" onclick="applyPromo()">${tr("applyPromo")}</button>
+    </div>
+    ${promo ? `<div class="muted">🎟 ${promo.code}: -${promo.percent}% до всього замовлення</div>` : ""}
+  `;
+
   container.innerHTML = data.items.map(i => `
     <div class="cart-row">
       <div>
         <strong>${i.display_name || i.name}</strong>
         <div class="muted">${Number(i.final_subtotal || 0).toFixed(2)} zł</div>
-        ${i.promo_code ? `<div class="muted">🎟 ${i.promo_code}: -${i.discount_percent}%</div>` : ""}
-        <div style="display:flex;gap:6px;margin-top:8px">
-          <input id="promo_${i.product_id}" placeholder="${tr("promo")}" style="padding:9px;margin:0">
-          <button class="secondary" onclick="applyPromo(${i.product_id})">${tr("applyPromo")}</button>
-        </div>
       </div>
       <div class="qty">
         ${Number(i.qty || 0) === 1
           ? `<button class="trash" title="${tr("removeFromCart")}" onclick="confirmRemoveFromCart(${i.product_id})">🗑</button>`
           : `<button onclick="changeQty(${i.product_id}, -1)">−</button>`}
         <span>${i.qty}</span>
-        <button onclick="changeQty(${i.product_id}, 1)">+</button>
+        <button class="plus" onclick="changeQty(${i.product_id}, 1)">+</button>
       </div>
     </div>
-  `).join("") + `<div class="total">${tr("total")}: ${Number(data.total || 0).toFixed(2)} zł</div>`;
+  `).join("") + promoBlock + `
+    ${Number(data.total_discount || 0) > 0 ? `<div class="muted total-before">До знижки: ${Number(data.total_before_discount || 0).toFixed(2)} zł · Знижка: ${Number(data.total_discount || 0).toFixed(2)} zł</div>` : ""}
+    <div class="total">${tr("total")}: ${Number(data.total || 0).toFixed(2)} zł</div>`;
 }
+
 
 $("reloadCart").addEventListener("click", () => loadCart());
 
@@ -553,35 +616,74 @@ async function removeFromCart(productId) {
   }
 }
 
-async function applyPromo(productId) {
-  const code = $(`promo_${productId}`).value.trim();
+async function applyPromo() {
+  const input = $("promo_order");
+  const code = input?.value.trim();
   if (!code) return;
+  const firstItem = (state.cart.items || [])[0];
+  if (!firstItem) return toast(tr("emptyCart"));
   const res = await api("/api/cart/promo", {
     method: "POST",
-    body: JSON.stringify({ user_id: state.userId, product_id: productId, code }),
+    body: JSON.stringify({ user_id: state.userId, product_id: firstItem.product_id, code }),
   });
   updateCartState(res.cart);
   toast(res.success ? `🎟 ${tr("done")}` : "❌");
 }
 
-$("checkoutBtn").addEventListener("click", async () => {
-  const name = $("orderName").value.trim();
-  const phone = $("orderPhone").value.trim();
-  const date = $("orderDate").value.trim();
-  const deliveryMethod = $("deliveryMethod").value;
-  const paymentMethod = $("paymentMethod").value;
-  const comment = $("orderComment").value.trim();
 
-  if (!name || !phone || !date || !deliveryMethod || !paymentMethod) return toast(tr("required"));
-  if (!isAllowedOrderDate(date)) return toast(`Дата має бути не раніше ${minOrderDateISO()}`);
+$("checkoutBtn").addEventListener("click", async () => {
+  await loadCart(false);
+  const payload = {
+    name: $("orderName").value.trim(),
+    phone: $("orderPhone").value.trim(),
+    date: $("orderDate").value.trim(),
+    deliveryMethod: $("deliveryMethod").value,
+    paymentMethod: $("paymentMethod").value,
+    comment: $("orderComment").value.trim(),
+  };
+
+  const error = validateOrderForm(payload);
+  if (error) return toast(error);
+  if (!state.cart.items || !state.cart.items.length) return toast(tr("emptyCart"));
+
+  showOrderConfirmation(payload);
+});
+
+function showOrderConfirmation(payload) {
+  $("modalContent").innerHTML = `
+    ${orderSummaryHtml(payload)}
+    <div class="confirm-actions">
+      <button class="primary" onclick='confirmCheckout(${JSON.stringify(payload).replaceAll("'", "&apos;")})'>✅ Підтвердити</button>
+      <button class="secondary" onclick="closeConfirmationModal()">↩️ Повернутися</button>
+    </div>
+  `;
+  $("modal").classList.remove("hidden");
+}
+
+function closeConfirmationModal() {
+  $("modal").classList.add("hidden");
+}
+
+async function confirmCheckout(payload) {
+  const error = validateOrderForm(payload);
+  if (error) return toast(error);
 
   try {
     const res = await api("/api/orders", {
       method: "POST",
-      body: JSON.stringify({ user_id: state.userId, name, phone, date, delivery_method: deliveryMethod, payment_method: paymentMethod, comment }),
+      body: JSON.stringify({
+        user_id: state.userId,
+        name: payload.name,
+        phone: normalizePhone(payload.phone),
+        date: payload.date,
+        delivery_method: payload.deliveryMethod,
+        payment_method: payload.paymentMethod,
+        comment: payload.comment,
+      }),
     });
     haptic("success");
     toast(`${tr("orderCreated")} #${res.id}`);
+    $("modal").classList.add("hidden");
     $("orderComment").value = "";
     $("deliveryMethod").value = "";
     $("paymentMethod").value = "";
@@ -591,7 +693,8 @@ $("checkoutBtn").addEventListener("click", async () => {
   } catch (e) {
     toast(e.message);
   }
-});
+}
+
 
 async function loadOrders() {
   const data = await api(`/api/orders/${state.userId}`);
@@ -599,18 +702,19 @@ async function loadOrders() {
   $("ordersList").innerHTML = orders.length ? orders.map(o => `
     <div class="order-row">
       <strong>${o.type === "custom" ? "🎂" : "📦"} #${o.id}</strong>
-      <div class="muted">${tr("status")}: ${o.status || ""}</div>
-      ${o.total ? `<div>${tr("total")}: ${Number(o.total).toFixed(2)} zł</div>` : ""}
-      ${o.order_date ? `<div class="muted">${tr("date")}: ${o.order_date}</div>` : ""}
-      ${o.delivery_method ? `<div class="muted">${tr("deliveryMethod")}: ${o.delivery_method}</div>` : ""}
-      ${o.payment_method ? `<div class="muted">${tr("paymentMethod")}: ${o.payment_method}</div>` : ""}
-      ${o.comment ? `<div class="muted">${tr("comment")}: ${o.comment}</div>` : ""}
-      ${o.items ? `<div class="muted">${o.items.map(i => `${i.display_name || i.name} ×${i.qty}`).join("<br>")}</div>` : ""}
-      ${o.description ? `<div class="muted">${o.description}</div>` : ""}
+      <div class="muted">📊 ${tr("status")}: ${o.status || ""}</div>
+      ${o.total ? `<div>💰 ${tr("total")}: ${Number(o.total).toFixed(2)} zł</div>` : ""}
+      ${o.order_date ? `<div class="muted">📅 ${tr("date")}: ${o.order_date}</div>` : ""}
+      ${o.delivery_method ? `<div class="muted">🚚 ${tr("deliveryMethod")}: ${o.delivery_method}</div>` : ""}
+      ${o.payment_method ? `<div class="muted">💳 ${tr("paymentMethod")}: ${o.payment_method}</div>` : ""}
+      ${o.comment ? `<div class="muted">💬 ${tr("comment")}: ${o.comment}</div>` : ""}
+      ${o.items ? `<div class="muted">🧁 ${o.items.map(i => `${i.display_name || i.name} ×${i.qty}`).join("<br>")}</div>` : ""}
+      ${o.description ? `<div class="muted">📝 ${o.description}</div>` : ""}
       ${o.type === "regular" && isCompletedOrder(o.status) && o.items && o.items.length ? `<button class="primary" onclick='startOrderReview(${JSON.stringify(o).replaceAll("'", "&apos;")})'>💬 ${tr("leaveOrderReview")}</button>` : ""}
     </div>
   `).join("") : `<div class="empty">📦 ${tr("empty")}</div>`;
 }
+
 
 function isCompletedOrder(status) {
   return ["Завершено", "Завершений", "Completed", "completed"].includes(status);
@@ -754,11 +858,12 @@ $("sendCustomBtn").addEventListener("click", async () => {
   const date = $("customDate").value.trim();
   const description = $("customDescription").value.trim();
   if (!name || !phone || !description || !date) return toast(tr("required"));
+  if (normalizePhone(phone).length !== 9) return toast("Телефон має містити рівно 9 цифр. Приклад: 504 123 456");
   if (!isAllowedOrderDate(date)) return toast(`Дата має бути не раніше ${minOrderDateISO()}`);
 
   const res = await api("/api/custom-orders", {
     method: "POST",
-    body: JSON.stringify({ user_id: state.userId, name, phone, date, description }),
+    body: JSON.stringify({ user_id: state.userId, name, phone: normalizePhone(phone), date, description }),
   });
   toast(`${tr("orderCreated")} C#${res.id}`);
   $("customDescription").value = "";

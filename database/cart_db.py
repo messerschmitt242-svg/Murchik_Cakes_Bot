@@ -110,6 +110,12 @@ def clear_cart_db(user_id: int):
 
 
 def apply_promo_to_cart_item(user_id: int, product_id: int, code: str):
+    """Apply promo code to the whole user cart.
+
+    The frontend may still send product_id for compatibility, but the discount
+    is intentionally stored on every current cart row so the final cart total
+    receives one order-level discount rather than a separate per-item promo.
+    """
     promo = get_promo(code)
     if not promo:
         return False, None
@@ -123,9 +129,9 @@ def apply_promo_to_cart_item(user_id: int, product_id: int, code: str):
         """
         UPDATE cart
         SET promo_code = ?, discount_percent = ?
-        WHERE user_id = ? AND product_id = ?
+        WHERE user_id = ?
         """,
-        (normalized_code, discount, user_id, product_id),
+        (normalized_code, discount, user_id),
     )
     changed = cursor.rowcount > 0
     conn.commit()
@@ -158,20 +164,18 @@ def get_cart_items_db(user_id: int):
 
     items = []
     total_before_discount = 0.0
-    total_discount = 0.0
-    total = 0.0
+    promo_code = ""
+    discount_percent = 0
 
     for row in rows:
         price = float(row["price"] or 0)
         qty = int(row["qty"] or 0)
-        discount_percent = int(row["discount_percent"] or 0)
         subtotal = price * qty
-        discount_amount = subtotal * discount_percent / 100
-        final_subtotal = subtotal - discount_amount
-
         total_before_discount += subtotal
-        total_discount += discount_amount
-        total += final_subtotal
+
+        if not promo_code and row["promo_code"]:
+            promo_code = row["promo_code"] or ""
+            discount_percent = int(row["discount_percent"] or 0)
 
         items.append(
             {
@@ -180,11 +184,22 @@ def get_cart_items_db(user_id: int):
                 "price": price,
                 "qty": qty,
                 "subtotal": subtotal,
+                # Promo is order-level. Keep it on each item for backward compatibility,
+                # but do not reduce every item line. The discount is calculated once
+                # from the full cart total below.
                 "promo_code": row["promo_code"] or "",
-                "discount_percent": discount_percent,
-                "discount_amount": discount_amount,
-                "final_subtotal": final_subtotal,
+                "discount_percent": int(row["discount_percent"] or 0),
+                "discount_amount": 0.0,
+                "final_subtotal": subtotal,
             }
         )
+
+    total_discount = total_before_discount * discount_percent / 100
+    total = total_before_discount - total_discount
+
+    if promo_code and items:
+        items[0]["order_promo_code"] = promo_code
+        items[0]["order_discount_percent"] = discount_percent
+        items[0]["order_discount_amount"] = total_discount
 
     return items, total, total_before_discount, total_discount

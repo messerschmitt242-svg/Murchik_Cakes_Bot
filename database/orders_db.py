@@ -166,9 +166,7 @@ def format_items(raw_items: str) -> str:
 
     result = []
     for item in items:
-        line = f"• {item.get('name', 'Товар')} x{item.get('qty', 1)} — {item.get('final_subtotal', item.get('subtotal', 0)):.2f} zł"
-        if item.get("promo_code"):
-            line += f"\n  промо: {item.get('promo_code')} (-{item.get('discount_percent', 0)}%)"
+        line = f"• {item.get('name', 'Товар')} ×{item.get('qty', 1)} — {item.get('final_subtotal', item.get('subtotal', 0)):.2f} zł"
         result.append(line)
     return "\n".join(result)
 
@@ -190,11 +188,11 @@ def format_order_details(order) -> str:
     comment = _row_value(order, "comment")
 
     if order_date:
-        lines.append(f"Дата замовлення: {order_date}")
+        lines.append(f"📅 Дата: {order_date}")
     if delivery_method:
-        lines.append(f"Доставка: {delivery_method}")
+        lines.append(f"🚚 Доставка: {delivery_method}")
     if payment_method:
-        lines.append(f"Оплата: {payment_method}")
+        lines.append(f"💳 Оплата: {payment_method}")
     if comment:
-        lines.append(f"Коментар: {comment}")
+        lines.append(f"💬 Коментар: {comment}")
     return "\n".join(lines)

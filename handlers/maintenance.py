@@ -13,5 +13,5 @@ async def clear_test_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "✅ Тестові дані очищено.\n"
-        "Каталог продуктів і відгуки залишились."
+        "Каталог продуктів залишились."
     )

@@ -36,11 +36,11 @@ async def list_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for order in orders:
         text += f"""
-ID: {order['id']}
-Клієнт: {order['name']}
-Телефон: {order['phone']}
-Статус: {order['status']}
-Сума: {float(order['total'] or 0):.2f} zł
+🆔 ID: {order['id']}
+👤 Клієнт: {order['name']}
+📞 Телефон: {order['phone']}
+📊 Статус: {order['status']}
+💰 Сума: {float(order['total'] or 0):.2f} zł
 {format_order_details(order)}
 {format_items(order['items'])}
 ------------------
@@ -143,11 +143,11 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 📦 Замовлення #{order['id']}
 
-Клієнт: {order['name']}
-Телефон: {order['phone']}
-Створено: {order['created_at']}
-Статус: {order['status']}
-Сума: {float(order['total'] or 0):.2f} zł
+👤 Клієнт: {order['name']}
+📞 Телефон: {order['phone']}
+🕒 Створено: {order['created_at']}
+📊 Статус: {order['status']}
+💰 Сума: {float(order['total'] or 0):.2f} zł
 {format_order_details(order)}
 
 {format_items(order['items'])}
@@ -192,14 +192,14 @@ async def show_admin_custom_order(update: Update, context: ContextTypes.DEFAULT_
     text = f"""
 🎂 Індивідуальне замовлення C#{order['id']}
 
-Клієнт: {order['name']}
-Телефон: {order['phone']}
-Дата видачі: {order['date']}
-Створено: {order['created_at']}
-Статус: {order['status']}
-Базовий десерт: {order['product_name'] or '—'}
+👤 Клієнт: {order['name']}
+📞 Телефон: {order['phone']}
+📅 Дата видачі: {order['date']}
+🕒 Створено: {order['created_at']}
+📊 Статус: {order['status']}
+🧁 Базовий десерт: {order['product_name'] or '—'}
 
-Опис:
+📝 Опис:
 {order['description']}
 """
 
