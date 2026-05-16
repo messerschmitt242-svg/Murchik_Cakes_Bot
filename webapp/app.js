@@ -231,7 +231,9 @@ function renderProducts(products, container) {
 
   container.innerHTML = products.map(p => `
     <article class="card">
-      ${imageMarkup(p, "card-img", "label")}
+      <button class="image-button" onclick="openProduct(${p.id})" aria-label="${tr("view")}">
+        ${imageMarkup(p, "card-img", "label")}
+      </button>
       <h3>${p.display_name || p.name}</h3>
       ${p.portion ? `<div class="muted">📦 ${tr("portion")}: ${p.portion}</div>` : ""}
       <div class="rating">${renderStars(p.rating)}</div>
@@ -239,7 +241,6 @@ function renderProducts(products, container) {
       <div class="price">${Number(p.price || 0).toFixed(2)} zł</div>
       <div class="actions">
         <button onclick="addToCart(${p.id})">🛒 ${tr("add")}</button>
-        <button class="secondary" onclick="openProduct(${p.id})">${tr("view")}</button>
       </div>
     </article>
   `).join("");
@@ -249,9 +250,12 @@ async function openProduct(id) {
   const p = await api(`/api/products/${id}?user_id=${state.userId}`);
   const reviews = await api(`/api/reviews/product/${id}?limit=5`);
 
+  const gallery = ((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean);
+  const mainPhoto = gallery[0] || productImageUrl(p, "photo");
+
   $("modalContent").innerHTML = `
-    ${imageMarkup(p, "detail-img", "photo")}
-    ${((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean).length > 1 ? `<div class="photo-strip">${((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean).map(src => `<img src="${src}" onerror="this.style.display='none'">`).join("")}</div>` : ""}
+    <img id="detailMainImage" class="detail-img" src="${mainPhoto}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))">
+    ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" onclick="selectProductPhoto('${src.replaceAll("'", "\\'")}', this)"><img src="${src}" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
     <h2>${p.display_name || p.name}</h2>
     <p class="muted">${renderStars(p.rating)}</p>
     ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
@@ -278,6 +282,14 @@ async function openProduct(id) {
     </div>
   `;
   $("modal").classList.remove("hidden");
+}
+
+
+function selectProductPhoto(src, button) {
+  const main = $("detailMainImage");
+  if (main) main.src = src;
+  document.querySelectorAll(".thumb-button").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
 }
 
 $("closeModal").addEventListener("click", () => $("modal").classList.add("hidden"));
