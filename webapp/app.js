@@ -234,10 +234,10 @@ function renderProducts(products, container) {
         ${imageMarkup(p, "card-img", "label")}
       </button>
       <h3>${p.display_name || p.name}</h3>
-      ${p.portion ? `<div class="muted">📦 ${tr("portion")}: ${p.portion}</div>` : ""}
       <div class="rating">${renderStars(p.rating)}</div>
       <p>${(p.display_description || p.description || "").slice(0, 86)}</p>
       <div class="price">${Number(p.price || 0).toFixed(2)} zł</div>
+      ${p.portion ? `<div class="muted">📦 ${tr("portion")}: ${p.portion}</div>` : ""}
       <div class="actions">
         <button onclick="addToCart(${p.id})">🛒 ${tr("add")}</button>
       </div>
