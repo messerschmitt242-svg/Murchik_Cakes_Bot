@@ -23,6 +23,13 @@ const LANG_LABELS = {
   en: "EN 🇬🇧",
 };
 
+const LOADING_TEXT = {
+  ua: "Завантаження меню...",
+  ru: "Загрузка меню...",
+  pl: "Ładowanie menu...",
+  en: "Loading menu...",
+};
+
 function minOrderDateISO() {
   const d = new Date();
   d.setDate(d.getDate() + 4);
@@ -123,11 +130,56 @@ const $ = (id) => document.getElementById(id);
 const tr = (key) => (I18N[state.lang] || I18N.ua)[key] || key;
 
 function setText() {
-    $("heroTitle").textContent = tr("heroTitle");
+  $("heroTitle").textContent = tr("heroTitle");
   $("heroText").textContent = tr("heroText");
   document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = tr(el.dataset.i18n));
   document.querySelectorAll("[data-placeholder]").forEach(el => el.placeholder = tr(el.dataset.placeholder));
+  const loaderText = $("loaderText");
+  if (loaderText) loaderText.textContent = LOADING_TEXT[state.lang] || LOADING_TEXT.ua;
   updateLangButton();
+}
+
+function showAppLoader() {
+  const loader = $("appLoader");
+  if (loader) loader.classList.remove("hidden");
+}
+
+function hideAppLoader() {
+  const loader = $("appLoader");
+  if (!loader) return;
+  loader.classList.add("hidden");
+  setTimeout(() => loader.remove(), 350);
+}
+
+function renderProductSkeletons(container = $("products"), count = 6) {
+  if (!container) return;
+  container.innerHTML = Array.from({ length: count }, () => `
+    <article class="card skeleton-card">
+      <div class="skeleton-img"></div>
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line tiny"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-price"></div>
+    </article>
+  `).join("");
+}
+
+function waitForInitialImages(limit = 6, timeout = 2500) {
+  const images = Array.from(document.querySelectorAll("#products img.card-img")).slice(0, limit);
+  if (!images.length) return Promise.resolve();
+
+  const waiters = images.map(img => {
+    if (img.complete) return Promise.resolve();
+    return new Promise(resolve => {
+      img.addEventListener("load", resolve, { once: true });
+      img.addEventListener("error", resolve, { once: true });
+    });
+  });
+
+  return Promise.race([
+    Promise.allSettled(waiters),
+    new Promise(resolve => setTimeout(resolve, timeout)),
+  ]);
 }
 
 async function api(path, options = {}) {
@@ -173,7 +225,9 @@ function productImageUrl(product, mode = "label") {
 
 function imageMarkup(product, cls = "card-img", mode = "label") {
   const url = productImageUrl(product, mode);
-  if (url) return `<img class="${cls}" src="${url}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'${cls}',textContent:'🍰'}))">`;
+  if (url) {
+    return `<img class="${cls} loading-img" src="${url}" alt="" loading="lazy" decoding="async" onload="this.classList.remove('loading-img')" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'${cls}',textContent:'🍰'}))">`;
+  }
   return `<div class="${cls}">🍰</div>`;
 }
 
@@ -254,17 +308,28 @@ $("langBtn").addEventListener("click", async () => {
 });
 
 async function bootstrap() {
+  showAppLoader();
+  renderProductSkeletons();
   applyDateLimits();
   try {
     const data = await api(`/api/bootstrap/${state.userId}`);
     state.lang = data.language || state.lang;
     localStorage.setItem("mc_lang", state.lang);
   } catch {}
+
   setText();
   $("searchInput").placeholder = tr("search");
   prefillUser();
-  await loadProducts();
-  await loadCart(false);
+
+  try {
+    await loadProducts(false);
+    await waitForInitialImages(6, 2500);
+    await loadCart(false);
+  } catch (e) {
+    toast(e.message || "Loading error");
+  } finally {
+    hideAppLoader();
+  }
 }
 
 function prefillUser() {
@@ -273,12 +338,15 @@ function prefillUser() {
   });
 }
 
-async function loadProducts() {
+async function loadProducts(showSkeleton = true) {
+  const container = $("products");
+  if (showSkeleton) renderProductSkeletons(container);
+
   const qs = new URLSearchParams({ user_id: state.userId });
   if (state.category) qs.set("category", state.category);
   if (state.search) qs.set("q", state.search);
   state.products = await api(`/api/products?${qs}`);
-  renderProducts(state.products, $("products"));
+  renderProducts(state.products, container);
 }
 
 function renderProducts(products, container) {
@@ -312,7 +380,7 @@ async function openProduct(id) {
   const mainPhoto = gallery[0] || productImageUrl(p, "photo");
 
   $("modalContent").innerHTML = `
-    <img id="detailMainImage" class="detail-img" src="${mainPhoto}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))">
+    <img id="detailMainImage" class="detail-img loading-img" src="${mainPhoto}" alt="" decoding="async" onload="this.classList.remove('loading-img')" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))">
     ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" onclick="selectProductPhoto('${src.replaceAll("'", "\\'")}', this)"><img src="${src}" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
     <h2>${localizedProductName(p)}</h2>
     <p class="muted">${renderStars(p.rating)}</p>
