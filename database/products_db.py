@@ -1,9 +1,10 @@
 
 import json
-from database.db import get_conn
+from database.db import get_conn, is_postgres
 from utils_translation import generate_product_translations
 
 CATEGORIES = ["Торти", "Тістечка"]
+
 
 def _decode_json(raw, default):
     if not raw:
@@ -15,14 +16,25 @@ def _decode_json(raw, default):
     except Exception:
         return default
 
+
 def _decode_photos(raw):
     return _decode_json(raw, [])
+
 
 def _decode_translations(raw):
     return _decode_json(raw, {})
 
+
 def get_categories():
     return CATEGORIES
+
+
+def _row_has(row, key: str) -> bool:
+    try:
+        return key in row.keys()
+    except Exception:
+        return False
+
 
 def _row_to_product(row):
     return {
@@ -32,8 +44,11 @@ def _row_to_product(row):
         "description": row["description"] or "",
         "photos": _decode_photos(row["photos"]),
         "category": row["category"] or "Торти",
-        "translations": _decode_translations(row["translations"] if "translations" in row.keys() else "{}"),
+        "portion": row["portion"] if _row_has(row, "portion") else "",
+        "label_image": row["label_image"] if _row_has(row, "label_image") else "",
+        "translations": _decode_translations(row["translations"] if _row_has(row, "translations") else "{}"),
     }
+
 
 def get_all_products(category: str | None = None):
     conn = get_conn()
@@ -42,7 +57,7 @@ def get_all_products(category: str | None = None):
     if category:
         cursor.execute(
             """
-            SELECT id, name, price, description, photos, category, translations
+            SELECT id, name, price, description, photos, category, portion, label_image, translations
             FROM products
             WHERE category = ?
             ORDER BY id DESC
@@ -52,7 +67,7 @@ def get_all_products(category: str | None = None):
     else:
         cursor.execute(
             """
-            SELECT id, name, price, description, photos, category, translations
+            SELECT id, name, price, description, photos, category, portion, label_image, translations
             FROM products
             ORDER BY id DESC
             """
@@ -63,12 +78,13 @@ def get_all_products(category: str | None = None):
 
     return [_row_to_product(row) for row in rows]
 
+
 def get_product(product_id: int):
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, name, price, description, photos, category, translations
+        SELECT id, name, price, description, photos, category, portion, label_image, translations
         FROM products
         WHERE id = ?
         """,
@@ -82,7 +98,16 @@ def get_product(product_id: int):
 
     return _row_to_product(row)
 
-def add_product(name: str, price: float, description: str, photos: list[str], category: str):
+
+def add_product(
+    name: str,
+    price: float,
+    description: str,
+    photos: list[str],
+    category: str,
+    portion: str = "",
+    label_image: str = "",
+):
     if category not in CATEGORIES:
         category = "Торти"
 
@@ -90,24 +115,49 @@ def add_product(name: str, price: float, description: str, photos: list[str], ca
 
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO products (name, price, description, photos, category, translations)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (
-            name,
-            price,
-            description,
-            json.dumps(photos, ensure_ascii=False),
-            category,
-            json.dumps(translations, ensure_ascii=False),
-        ),
-    )
+
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO products (name, price, description, photos, category, portion, label_image, translations)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            (
+                name,
+                price,
+                description,
+                json.dumps(photos, ensure_ascii=False),
+                category,
+                portion,
+                label_image,
+                json.dumps(translations, ensure_ascii=False),
+            ),
+        )
+        product_id = cursor.fetchone()["id"]
+    else:
+        cursor.execute(
+            """
+            INSERT INTO products (name, price, description, photos, category, portion, label_image, translations)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                name,
+                price,
+                description,
+                json.dumps(photos, ensure_ascii=False),
+                category,
+                portion,
+                label_image,
+                json.dumps(translations, ensure_ascii=False),
+            ),
+        )
+        product_id = cursor.lastrowid
+
     conn.commit()
-    product_id = cursor.lastrowid
     conn.close()
     return product_id
+
 
 def update_product_translations(product_id: int, translations: dict):
     conn = get_conn()
@@ -119,6 +169,29 @@ def update_product_translations(product_id: int, translations: dict):
     conn.commit()
     conn.close()
 
+
+def update_product_label(product_id: int, label_image: str):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE products SET label_image = ? WHERE id = ?",
+        (label_image, product_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def update_product_portion(product_id: int, portion: str):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE products SET portion = ? WHERE id = ?",
+        (portion, product_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def regenerate_product_translations(product_id: int):
     product = get_product(product_id)
     if not product:
@@ -126,6 +199,7 @@ def regenerate_product_translations(product_id: int):
     translations = generate_product_translations(product["name"], product["description"])
     update_product_translations(product_id, translations)
     return True
+
 
 def delete_product_by_id(product_id: int) -> bool:
     conn = get_conn()

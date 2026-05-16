@@ -1,4 +1,6 @@
-from database.db import get_conn
+
+import json
+from database.db import get_conn, is_postgres
 from database.products_db import get_product
 
 
@@ -17,10 +19,20 @@ def is_favorite_db(user_id: int, product_id: int) -> bool:
 def add_favorite_db(user_id: int, product_id: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT OR IGNORE INTO favorites (user_id, product_id) VALUES (?, ?)",
-        (user_id, product_id),
-    )
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO favorites (user_id, product_id)
+            VALUES (?, ?)
+            ON CONFLICT(user_id, product_id) DO NOTHING
+            """,
+            (user_id, product_id),
+        )
+    else:
+        cursor.execute(
+            "INSERT OR IGNORE INTO favorites (user_id, product_id) VALUES (?, ?)",
+            (user_id, product_id),
+        )
     conn.commit()
     conn.close()
 
@@ -53,7 +65,7 @@ def get_favorites_db(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT p.id, p.name, p.price, p.description, p.photos, p.category, p.translations
+        SELECT p.id, p.name, p.price, p.description, p.photos, p.category, p.portion, p.label_image, p.translations
         FROM favorites f
         JOIN products p ON p.id = f.product_id
         WHERE f.user_id = ?
@@ -64,14 +76,17 @@ def get_favorites_db(user_id: int):
     rows = cursor.fetchall()
     conn.close()
 
-    import json
-
     result = []
     for row in rows:
         try:
             photos = json.loads(row["photos"] or "[]")
         except Exception:
             photos = []
+
+        try:
+            translations = json.loads(row["translations"] or "{}")
+        except Exception:
+            translations = {}
 
         result.append({
             "id": row["id"],
@@ -80,7 +95,9 @@ def get_favorites_db(user_id: int):
             "description": row["description"] or "",
             "photos": photos,
             "category": row["category"] or "Торти",
-            "translations": json.loads(row["translations"] or "{}") if "translations" in row.keys() else {},
+            "portion": row["portion"] if "portion" in row.keys() else "",
+            "label_image": row["label_image"] if "label_image" in row.keys() else "",
+            "translations": translations,
         })
 
     return result

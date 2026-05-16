@@ -1,4 +1,5 @@
-from database.db import get_conn
+
+from database.db import get_conn, is_postgres
 
 
 def create_promo(code: str, discount_percent: int) -> bool:
@@ -8,13 +9,23 @@ def create_promo(code: str, discount_percent: int) -> bool:
 
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT OR REPLACE INTO promo_codes (code, discount_percent, is_active)
-        VALUES (?, ?, 1)
-        """,
-        (code, discount_percent),
-    )
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO promo_codes (code, discount_percent, is_active)
+            VALUES (?, ?, 1)
+            ON CONFLICT(code) DO UPDATE SET discount_percent = EXCLUDED.discount_percent, is_active = 1
+            """,
+            (code, discount_percent),
+        )
+    else:
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO promo_codes (code, discount_percent, is_active)
+            VALUES (?, ?, 1)
+            """,
+            (code, discount_percent),
+        )
     conn.commit()
     conn.close()
     return True

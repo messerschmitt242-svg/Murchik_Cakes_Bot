@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Murchik Cakes</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1 id="appTitle">Murchik Cakes</h1>
+        <p id="subtitle">Telegram Mini App</p>
+      </div>
+      <button id="langBtn" class="round">🌐</button>
+    </header>
+
+    <section class="hero">
+      <div>
+        <strong id="heroTitle">Fresh cakes and pastries</strong>
+        <span id="heroText">Order your favorite desserts in a few taps.</span>
+      </div>
+      <span class="hero-icon">🍰</span>
+    </section>
+
+    <nav class="tabs">
+      <button data-tab="catalog" class="tab active">🍰 <span data-i18n="catalog">Catalog</span></button>
+      <button data-tab="cart" class="tab">🛒 <span data-i18n="cart">Cart</span><b id="cartBadge" class="badge hidden">0</b></button>
+      <button data-tab="orders" class="tab">📦 <span data-i18n="orders">Orders</span></button>
+      <button data-tab="more" class="tab">✨ <span data-i18n="more">More</span></button>
+    </nav>
+
+    <main>
+      <section id="catalog" class="screen active">
+        <div class="search-wrap">
+          <input id="searchInput" placeholder="Search desserts..." />
+        </div>
+        <div class="category-row">
+          <button class="pill active" data-category="" data-i18n="all">All</button>
+          <button class="pill" data-category="Торти" data-i18n="cakes">🎂 Cakes</button>
+          <button class="pill" data-category="Тістечка" data-i18n="pastries">🧁 Pastries</button>
+        </div>
+        <div id="products" class="grid"></div>
+      </section>
+
+      <section id="cart" class="screen">
+        <div class="screen-head">
+          <h2 data-i18n="cart">Cart</h2>
+          <button id="reloadCart" class="mini">↻</button>
+        </div>
+        <div id="cartItems"></div>
+        <div class="checkout-card">
+          <h3 data-i18n="checkout">Checkout</h3>
+          <input id="orderName" data-placeholder="name" placeholder="Name" />
+          <input id="orderPhone" data-placeholder="phone" placeholder="Phone" />
+          <input id="orderDate" data-placeholder="date" placeholder="Date" />
+          <textarea id="orderComment" data-placeholder="comment" placeholder="Comment"></textarea>
+          <button id="checkoutBtn" class="primary" data-i18n="createOrder">Create order</button>
+        </div>
+      </section>
+
+      <section id="orders" class="screen">
+        <div class="screen-head">
+          <h2 data-i18n="orders">Orders</h2>
+          <button id="reloadOrders" class="mini">↻</button>
+        </div>
+        <div id="ordersList"></div>
+      </section>
+
+      <section id="more" class="screen">
+        <div class="menu-grid">
+          <button id="favoritesBtn" class="menu-card">❤️ <span data-i18n="favorites">Favorites</span></button>
+          <button id="reviewsBtn" class="menu-card">💬 <span data-i18n="reviews">Reviews</span></button>
+          <button id="customBtn" class="menu-card">🎂 <span data-i18n="customOrder">Custom order</span></button>
+          <button id="contactsBtn" class="menu-card">📍 <span data-i18n="contacts">Contacts</span></button>
+        </div>
+
+        <div id="favoritesPanel" class="panel hidden">
+          <h2 data-i18n="favorites">Favorites</h2>
+          <div id="favoritesList" class="grid"></div>
+        </div>
+
+        <div id="reviewsPanel" class="panel hidden">
+          <h2 data-i18n="reviews">Reviews</h2>
+          <div id="reviewsList"></div>
+          <div class="form-card">
+            <input id="reviewName" data-placeholder="name" placeholder="Name" />
+            <textarea id="reviewText" data-placeholder="reviewText" placeholder="Your review"></textarea>
+            <select id="reviewRating">
+              <option value="5">⭐ 5</option>
+              <option value="4">⭐ 4</option>
+              <option value="3">⭐ 3</option>
+              <option value="2">⭐ 2</option>
+              <option value="1">⭐ 1</option>
+            </select>
+            <button id="sendReviewBtn" class="primary" data-i18n="sendReview">Send review</button>
+          </div>
+        </div>
+
+        <div id="customPanel" class="panel hidden">
+          <h2 data-i18n="customOrder">Custom order</h2>
+          <div class="form-card">
+            <input id="customName" data-placeholder="name" placeholder="Name" />
+            <input id="customPhone" data-placeholder="phone" placeholder="Phone" />
+            <input id="customDate" data-placeholder="date" placeholder="Date" />
+            <textarea id="customDescription" data-placeholder="customDescription" placeholder="Describe what you want"></textarea>
+            <button id="sendCustomBtn" class="primary" data-i18n="sendCustom">Send custom order</button>
+          </div>
+        </div>
+
+        <div id="contactsPanel" class="panel hidden">
+          <h2 data-i18n="contacts">Contacts</h2>
+          <div class="contact-card">
+            <p>📞 +48 504 690 652</p>
+            <p>📍 ul. Toruńska 45D, Bydgoszcz</p>
+            <p>🕒 10:00 — 18:00</p>
+            <a class="primary link" href="https://maps.app.goo.gl/7YLX42TMak4FdaXm9" target="_blank" data-i18n="route">Route</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="closeModal" class="close">×</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

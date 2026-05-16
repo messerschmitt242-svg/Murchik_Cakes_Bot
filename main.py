@@ -54,12 +54,16 @@ from handlers.add_product import (
     add_price,
     add_description,
     choose_category,
+    add_portion,
+    add_label,
     cancel_add_product,
     ADD_PHOTO,
     ADD_NAME,
     ADD_PRICE,
     ADD_DESCRIPTION,
     ADD_CATEGORY,
+    ADD_PORTION,
+    ADD_LABEL,
 )
 
 from handlers.cart import (
@@ -139,6 +143,7 @@ def build_app():
     add_product_handler = ConversationHandler(
         entry_points=[
             MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start),
+            CommandHandler("add_dessert", add_product_start),
         ],
         states={
             ADD_PHOTO: [
@@ -148,7 +153,9 @@ def build_app():
             ADD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)],
             ADD_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price)],
             ADD_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_description)],
-            ADD_CATEGORY: [CallbackQueryHandler(choose_category, pattern="^add_category_")],
+            ADD_CATEGORY: [CallbackQueryHandler(choose_category, pattern="^add_dessert_category_")],
+            ADD_PORTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_portion)],
+            ADD_LABEL: [MessageHandler(filters.PHOTO, add_label)],
         },
         fallbacks=[
             CommandHandler("cancel", cancel_add_product),
@@ -321,6 +328,7 @@ def build_app():
 if __name__ == "__main__":
     application = build_app()
     print("Bot started")
+    print("ADD_DESSERT_FLOW_FINAL_2026_05_16")
     application.run_polling()
 
-
+# force railway rebuild 2026-05-16

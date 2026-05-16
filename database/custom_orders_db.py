@@ -1,4 +1,5 @@
-from database.db import get_conn
+
+from database.db import get_conn, is_postgres
 
 CUSTOM_STATUSES = [
     "Прийнято",
@@ -20,17 +21,32 @@ def create_custom_order_db(
 ) -> int:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO custom_orders (
-            user_id, name, phone, product_id, product_name, description, date, photo, status
+
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO custom_orders (
+                user_id, name, phone, product_id, product_name, description, date, photo, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
-    )
+        order_id = cursor.fetchone()["id"]
+    else:
+        cursor.execute(
+            """
+            INSERT INTO custom_orders (
+                user_id, name, phone, product_id, product_name, description, date, photo, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
+        )
+        order_id = cursor.lastrowid
+
     conn.commit()
-    order_id = cursor.lastrowid
     conn.close()
     return order_id
 
@@ -70,10 +86,7 @@ def get_custom_order(order_id: int):
 def update_custom_order_status(order_id: int, status: str) -> bool:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE custom_orders SET status = ? WHERE id = ?",
-        (status, order_id),
-    )
+    cursor.execute("UPDATE custom_orders SET status = ? WHERE id = ?", (status, order_id))
     changed = cursor.rowcount > 0
     conn.commit()
     conn.close()

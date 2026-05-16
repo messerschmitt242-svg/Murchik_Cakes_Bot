@@ -115,6 +115,7 @@ async def show_product_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
 🍰 {translated_name}
 
 💰 {product['price']:.2f} zł
+📦 {product.get('portion') or '—'}
 {rating_line}
 
 📝 {translated_description}

@@ -1,5 +1,6 @@
+
 import json
-from database.db import get_conn
+from database.db import get_conn, is_postgres
 
 STATUSES = [
     "Прийнято",
@@ -12,22 +13,28 @@ STATUSES = [
 def create_order(user_id: int, name: str, phone: str, items: list[dict], total: float) -> int:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO orders (user_id, name, phone, items, total, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (
-            user_id,
-            name,
-            phone,
-            json.dumps(items, ensure_ascii=False),
-            total,
-            "Прийнято",
-        ),
-    )
+
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO orders (user_id, name, phone, items, total, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            (user_id, name, phone, json.dumps(items, ensure_ascii=False), total, "Прийнято"),
+        )
+        order_id = cursor.fetchone()["id"]
+    else:
+        cursor.execute(
+            """
+            INSERT INTO orders (user_id, name, phone, items, total, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, name, phone, json.dumps(items, ensure_ascii=False), total, "Прийнято"),
+        )
+        order_id = cursor.lastrowid
+
     conn.commit()
-    order_id = cursor.lastrowid
     conn.close()
     return order_id
 

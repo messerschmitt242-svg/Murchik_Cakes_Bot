@@ -449,3 +449,17 @@ Conflict: terminated by other getUpdates request
 
 Після налаштування Railway бот буде працювати 24/7.
 
+
+
+---
+
+# PostgreSQL + Telegram Mini App
+
+См. подробную инструкцию в файле `POSTGRES_MINIAPP_INSTRUCTIONS.md`.
+
+
+---
+
+# Mini App v3
+
+Функциональный Mini App интерфейс описан в `MINIAPP_V3_FUNCTIONAL_RELEASE.md`.

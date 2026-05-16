@@ -1,4 +1,5 @@
-from database.db import get_conn
+
+from database.db import get_conn, is_postgres
 
 
 def add_review_db(
@@ -12,15 +13,28 @@ def add_review_db(
 ) -> int:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO reviews (user_id, name, text, rating, review_type, product_id, product_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        (user_id, name, text, rating, review_type, product_id, product_name),
-    )
+
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO reviews (user_id, name, text, rating, review_type, product_id, product_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            (user_id, name, text, rating, review_type, product_id, product_name),
+        )
+        review_id = cursor.fetchone()["id"]
+    else:
+        cursor.execute(
+            """
+            INSERT INTO reviews (user_id, name, text, rating, review_type, product_id, product_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, name, text, rating, review_type, product_id, product_name),
+        )
+        review_id = cursor.lastrowid
+
     conn.commit()
-    review_id = cursor.lastrowid
     conn.close()
     return review_id
 

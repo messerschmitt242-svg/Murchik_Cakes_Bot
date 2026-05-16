@@ -1,19 +1,27 @@
-from telegram import ReplyKeyboardMarkup
-from config import is_admin
+from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from config import is_admin, WEBAPP_URL
 from locales import tr
+
+
+def _webapp_row():
+    if not WEBAPP_URL:
+        return None
+    return [KeyboardButton("🛍 Mini App", web_app=WebAppInfo(url=WEBAPP_URL))]
 
 
 def get_main_menu(user_id: int | None = None):
     if user_id is None:
-        # Backward compatibility for old handlers that still import main_menu.
-        # Default language: Ukrainian.
         keyboard = [
             ["🍰 Каталог", "🛒 Кошик"],
             ["📦 Мої замовлення", "💬 Відгуки"],
             ["🎂 Індивідуальне замовлення", "❤️ Обране"],
             ["❓ FAQ", "📍 Контакти"],
-            ["🌐 Мова"],
+            ["🌐 Мова / Язык / Język / Language"],
         ]
+
+        webapp = _webapp_row()
+        if webapp:
+            keyboard.insert(0, webapp)
 
         return ReplyKeyboardMarkup(
             keyboard,
@@ -28,6 +36,10 @@ def get_main_menu(user_id: int | None = None):
         [tr(user_id, "menu_language")],
     ]
 
+    webapp = _webapp_row()
+    if webapp:
+        keyboard.insert(0, webapp)
+
     if is_admin(user_id):
         keyboard.insert(0, ["📋 Активні замовлення", "🎟 Промокоди"])
         keyboard.insert(1, ["➕ Додати продукт", "🗑 Видалити продукт"])
@@ -38,6 +50,4 @@ def get_main_menu(user_id: int | None = None):
     )
 
 
-# Compatibility with old imports:
-# from keyboards.main_menu import main_menu
 main_menu = get_main_menu()
