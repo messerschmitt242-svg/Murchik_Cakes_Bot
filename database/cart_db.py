@@ -3,41 +3,94 @@ from database.promo_db import get_promo
 
 
 def add_to_cart_db(user_id: int, product_id: int):
+    """Add one product to cart.
+
+    Do not rely on SQLite/PostgreSQL UPSERT here: some deployed databases may
+    have been created by an older version of the project without the composite
+    PRIMARY KEY/UNIQUE constraint. A safe SELECT -> UPDATE/INSERT flow prevents
+    Internal Server Error on /api/cart/add and works with both SQLite and
+    PostgreSQL.
+    """
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO cart (user_id, product_id, qty)
-        VALUES (?, ?, 1)
-        ON CONFLICT(user_id, product_id)
-        DO UPDATE SET qty = qty + 1
-        """,
-        (user_id, product_id),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute(
+            """
+            SELECT qty
+            FROM cart
+            WHERE user_id = ? AND product_id = ?
+            LIMIT 1
+            """,
+            (user_id, product_id),
+        )
+        row = cursor.fetchone()
+
+        if row:
+            cursor.execute(
+                """
+                UPDATE cart
+                SET qty = qty + 1
+                WHERE user_id = ? AND product_id = ?
+                """,
+                (user_id, product_id),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO cart (user_id, product_id, qty)
+                VALUES (?, ?, 1)
+                """,
+                (user_id, product_id),
+            )
+
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def change_cart_qty_db(user_id: int, product_id: int, delta: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        UPDATE cart
-        SET qty = qty + ?
-        WHERE user_id = ? AND product_id = ?
-        """,
-        (delta, user_id, product_id),
-    )
-    cursor.execute(
-        """
-        DELETE FROM cart
-        WHERE user_id = ? AND product_id = ? AND qty <= 0
-        """,
-        (user_id, product_id),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute(
+            """
+            SELECT qty
+            FROM cart
+            WHERE user_id = ? AND product_id = ?
+            LIMIT 1
+            """,
+            (user_id, product_id),
+        )
+        row = cursor.fetchone()
+
+        if row:
+            cursor.execute(
+                """
+                UPDATE cart
+                SET qty = qty + ?
+                WHERE user_id = ? AND product_id = ?
+                """,
+                (delta, user_id, product_id),
+            )
+        elif delta > 0:
+            cursor.execute(
+                """
+                INSERT INTO cart (user_id, product_id, qty)
+                VALUES (?, ?, ?)
+                """,
+                (user_id, product_id, delta),
+            )
+
+        cursor.execute(
+            """
+            DELETE FROM cart
+            WHERE user_id = ? AND product_id = ? AND qty <= 0
+            """,
+            (user_id, product_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def remove_from_cart_db(user_id: int, product_id: int):
