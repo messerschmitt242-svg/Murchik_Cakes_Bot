@@ -9,15 +9,16 @@ def _webapp_row():
 
 
 def get_main_menu(user_id: int | None = None):
-    keyboard = [_webapp_row()]
+    """Main reply keyboard.
 
+    Admins should see only the entry point to the admin panel.
+    User ordering is handled through the Telegram Mini App menu button / channel link,
+    so extra reply buttons are intentionally hidden from the main chat menu.
+    """
     if user_id is not None and is_admin(user_id):
-        keyboard.extend([
-            ["🛠 Адмін-панель"],
-            ["📋 Активні замовлення", "🎟 Промокоди"],
-            ["➕ Додати продукт", "🖼 Оновити фото"],
-            ["🗑 Видалити продукт"],
-        ])
+        keyboard = [["🛠 Адмін-панель"]]
+    else:
+        keyboard = [_webapp_row()]
 
     return ReplyKeyboardMarkup(
         keyboard,
