@@ -74,7 +74,7 @@ const I18N = {
     sendReview: "Надіслати відгук", reviewText: "Ваш відгук", sendCustom: "Надіслати замовлення",
     customDescription: "Опишіть, що саме потрібно", productReviews: "Відгуки про товар",
     addReview: "Залишити відгук", promo: "Промокод", applyPromo: "Застосувати",
-    required: "Заповніть обов'язкові поля", done: "Готово", status: "Статус", portion: "Порція", removeFavorite: "Видалити з обраного", leaveOrderReview: "Залишити відгук", confirmReview: "Підтвердити", product: "Товар",
+    required: "Заповніть обов'язкові поля", done: "Готово", status: "Статус", portion: "Порція", removeFavorite: "Видалити з обраного", leaveOrderReview: "Залишити відгук", confirmReview: "Підтвердити", product: "Товар", removeFromCart: "Удалить из корзины", confirmRemove: "Вы точно хотите удалить товар из корзины?", yes: "Да", no: "Нет", removeFromCart: "Видалити з кошика", confirmRemove: "Ви точно хочете видалити товар з кошика?", yes: "Так", no: "Ні",
   },
   ru: {
     subtitle: "Кондитерская в Telegram",
@@ -106,7 +106,7 @@ const I18N = {
     sendReview: "Wyślij opinię", reviewText: "Twoja opinia", sendCustom: "Wyślij zamówienie",
     customDescription: "Opisz, czego potrzebujesz", productReviews: "Opinie o produkcie",
     addReview: "Dodaj opinię", promo: "Kod promo", applyPromo: "Zastosuj",
-    required: "Wypełnij wymagane pola", done: "Gotowe", status: "Status", portion: "Porcja", removeFavorite: "Usuń z ulubionych", leaveOrderReview: "Dodaj opinię", confirmReview: "Potwierdź", product: "Produkt",
+    required: "Wypełnij wymagane pola", done: "Gotowe", status: "Status", portion: "Porcja", removeFavorite: "Usuń z ulubionych", leaveOrderReview: "Dodaj opinię", confirmReview: "Potwierdź", product: "Produkt", removeFromCart: "Usuń z koszyka", confirmRemove: "Na pewno usunąć produkt z koszyka?", yes: "Tak", no: "Nie",
   },
   en: {
     subtitle: "Bakery in Telegram",
@@ -122,25 +122,12 @@ const I18N = {
     sendReview: "Send review", reviewText: "Your review", sendCustom: "Send order",
     customDescription: "Describe what you need", productReviews: "Product reviews",
     addReview: "Leave review", promo: "Promo code", applyPromo: "Apply",
-    required: "Fill required fields", done: "Done", status: "Status", portion: "Portion", removeFavorite: "Remove from favorites", leaveOrderReview: "Leave review", confirmReview: "Confirm", product: "Product",
+    required: "Fill required fields", done: "Done", status: "Status", portion: "Portion", removeFavorite: "Remove from favorites", leaveOrderReview: "Leave review", confirmReview: "Confirm", product: "Product", removeFromCart: "Remove from cart", confirmRemove: "Are you sure you want to remove this item from the cart?", yes: "Yes", no: "No",
   }
 };
 
 const $ = (id) => document.getElementById(id);
 const tr = (key) => (I18N[state.lang] || I18N.ua)[key] || key;
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function escapeAttr(value) {
-  return escapeHtml(value);
-}
 
 function setText() {
   $("heroTitle").textContent = tr("heroTitle");
@@ -175,26 +162,6 @@ function renderProductSkeletons(container = $("products"), count = 6) {
       <div class="skeleton-price"></div>
     </article>
   `).join("");
-}
-
-function renderDetailSkeleton() {
-  const modalContent = $("modalContent");
-  if (!modalContent) return;
-  modalContent.innerHTML = `
-    <div class="detail-skeleton">
-      <div class="skeleton-detail-img"></div>
-      <div class="skeleton-thumb-row">
-        <div class="skeleton-thumb"></div>
-        <div class="skeleton-thumb"></div>
-        <div class="skeleton-thumb"></div>
-      </div>
-      <div class="skeleton-line short"></div>
-      <div class="skeleton-line tiny"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-price"></div>
-    </div>
-  `;
 }
 
 function waitForInitialImages(limit = 6, timeout = 2500) {
@@ -355,9 +322,9 @@ async function bootstrap() {
   prefillUser();
 
   try {
+    await loadCart(false);
     await loadProducts(false);
     await waitForInitialImages(6, 2500);
-    await loadCart(false);
   } catch (e) {
     toast(e.message || "Loading error");
   } finally {
@@ -382,6 +349,40 @@ async function loadProducts(showSkeleton = true) {
   renderProducts(state.products, container);
 }
 
+function cartItemFor(productId) {
+  return (state.cart.items || []).find(i => Number(i.product_id) === Number(productId));
+}
+
+function cartQtyFor(productId) {
+  return Number(cartItemFor(productId)?.qty || 0);
+}
+
+function renderProductCartAction(productId) {
+  const qty = cartQtyFor(productId);
+  if (qty <= 0) {
+    return `<button class="add-cart-btn" onclick="addToCart(${productId})">🛒 ${tr("add")}</button>`;
+  }
+
+  const minusButton = qty === 1
+    ? `<button class="cart-control-btn trash" title="${tr("removeFromCart")}" onclick="confirmRemoveFromCart(${productId})">🗑</button>`
+    : `<button class="cart-control-btn" onclick="changeQty(${productId}, -1)">−</button>`;
+
+  return `
+    <div class="inline-cart-controls" data-product-id="${productId}">
+      ${minusButton}
+      <span class="inline-cart-count">${qty}</span>
+      <button class="cart-control-btn" onclick="changeQty(${productId}, 1)">+</button>
+    </div>
+  `;
+}
+
+function refreshProductCartButtons() {
+  document.querySelectorAll("[data-cart-action]").forEach(el => {
+    const productId = Number(el.dataset.cartAction);
+    el.innerHTML = renderProductCartAction(productId);
+  });
+}
+
 function renderProducts(products, container) {
   if (!products.length) {
     container.innerHTML = `<div class="empty">🍰 ${tr("empty")}</div>`;
@@ -390,7 +391,7 @@ function renderProducts(products, container) {
 
   container.innerHTML = products.map(p => `
     <article class="card">
-      <button class="image-button" data-action="open-product" data-product-id="${p.id}" aria-label="${tr("view")}">
+      <button class="image-button" onclick="openProduct(${p.id})" aria-label="${tr("view")}">
         ${imageMarkup(p, "card-img", "label")}
       </button>
       <h3>${localizedProductName(p)}</h3>
@@ -398,115 +399,73 @@ function renderProducts(products, container) {
       <p>${localizedProductDescription(p).slice(0, 86)}</p>
       <div class="price">${Number(p.price || 0).toFixed(2)} zł</div>
       ${p.portion ? `<div class="muted">📦 ${tr("portion")}: ${p.portion}</div>` : ""}
-      <div class="actions">
-        <button data-action="add-to-cart" data-product-id="${p.id}">🛒 ${tr("add")}</button>
+      <div class="actions" data-cart-action="${p.id}">
+        ${renderProductCartAction(p.id)}
       </div>
     </article>
   `).join("");
 }
 
 async function openProduct(id) {
-  $("modal").classList.remove("hidden");
-  renderDetailSkeleton();
+  const p = await api(`/api/products/${id}?user_id=${state.userId}`);
+  const reviews = await api(`/api/reviews/product/${id}?limit=5`);
 
-  try {
-    const [p, reviews] = await Promise.all([
-      api(`/api/products/${id}?user_id=${state.userId}`),
-      api(`/api/reviews/product/${id}?limit=5`),
-    ]);
+  const gallery = ((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean);
+  const mainPhoto = gallery[0] || productImageUrl(p, "photo");
 
-    const gallery = ((p.photo_urls && p.photo_urls.length ? p.photo_urls : (p.photos || []).map(imageUrl))).filter(Boolean);
-    const mainPhoto = gallery[0] || productImageUrl(p, "photo");
-
-    $("modalContent").innerHTML = `
-      ${mainPhoto
-        ? `<div class="detail-image-wrap loading-img"><img id="detailMainImage" class="detail-img" src="${escapeAttr(mainPhoto)}" alt="" decoding="async" onload="this.parentElement.classList.remove('loading-img')" onerror="this.parentElement.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))"></div>`
-        : `<div class="detail-img">🍰</div>`}
-      ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" data-action="select-photo" data-src="${escapeAttr(src)}"><img src="${escapeAttr(src)}" loading="lazy" decoding="async" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
-      <h2>${escapeHtml(localizedProductName(p))}</h2>
-      <p class="muted">${renderStars(p.rating)}</p>
-      <p>${escapeHtml(localizedProductDescription(p))}</p>
-      <h3>${Number(p.price || 0).toFixed(2)} zł</h3>
-      ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${escapeHtml(p.portion)}</p>` : ""}
-      <div class="actions detail-actions">
-        <button data-action="add-to-cart" data-product-id="${p.id}">🛒 ${tr("add")}</button>
-        <button class="secondary" data-action="toggle-favorite" data-product-id="${p.id}">${p.is_favorite ? "💔 " + tr("removeFavorite") : "❤️ " + tr("favorite")}</button>
+  $("modalContent").innerHTML = `
+    <img id="detailMainImage" class="detail-img loading-img" src="${mainPhoto}" alt="" decoding="async" onload="this.classList.remove('loading-img')" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'detail-img',textContent:'🍰'}))">
+    ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" onclick="selectProductPhoto('${src.replaceAll("'", "\\'")}', this)"><img src="${src}" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
+    <h2>${localizedProductName(p)}</h2>
+    <p class="muted">${renderStars(p.rating)}</p>
+    <p>${localizedProductDescription(p)}</p>
+    <h3>${Number(p.price || 0).toFixed(2)} zł</h3>
+    ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
+    <div class="actions detail-actions">
+      <div class="detail-cart-action" data-cart-action="${p.id}">
+        ${renderProductCartAction(p.id)}
       </div>
-      <hr class="reviews-divider">
-      <h3 class="reviews-title">💬 ${tr("productReviews")}</h3>
-      <div>${renderReviews(reviews)}</div>
-    `;
-  } catch (e) {
-    $("modalContent").innerHTML = `<div class="empty">❌ ${escapeHtml(e.message || "Loading error")}</div>`;
-  }
+      <button class="secondary" onclick="toggleFavorite(${p.id})">${p.is_favorite ? "💔 " + tr("removeFavorite") : "❤️ " + tr("favorite")}</button>
+    </div>
+    <hr class="reviews-divider">
+    <h3 class="reviews-title">💬 ${tr("productReviews")}</h3>
+    <div>${renderReviews(reviews)}</div>  `;
+  $("modal").classList.remove("hidden");
 }
 
 
 function selectProductPhoto(src, button) {
   const main = $("detailMainImage");
-  const wrap = main?.parentElement;
-  if (main) {
-    if (wrap) wrap.classList.add("loading-img");
-    main.onload = () => wrap?.classList.remove("loading-img");
-    main.onerror = () => {
-      if (wrap) wrap.replaceWith(Object.assign(document.createElement("div"), { className: "detail-img", textContent: "🍰" }));
-    };
-    main.src = src;
-  }
+  if (main) main.src = src;
   document.querySelectorAll(".thumb-button").forEach(btn => btn.classList.remove("active"));
   if (button) button.classList.add("active");
 }
 
 $("closeModal").addEventListener("click", () => $("modal").classList.add("hidden"));
 
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
-
-  const action = btn.dataset.action;
-
-  if (action === "open-product") {
-    e.preventDefault();
-    await openProduct(Number(btn.dataset.productId));
-    return;
-  }
-
-  if (action === "add-to-cart") {
-    e.preventDefault();
-    if (btn.disabled) return;
-    btn.disabled = true;
-    const oldText = btn.textContent;
-    btn.textContent = "⏳";
-    try {
-      await addToCart(Number(btn.dataset.productId));
-    } finally {
-      btn.disabled = false;
-      btn.textContent = oldText;
-    }
-    return;
-  }
-
-  if (action === "toggle-favorite") {
-    e.preventDefault();
-    await toggleFavorite(Number(btn.dataset.productId));
-    await openProduct(Number(btn.dataset.productId));
-    return;
-  }
-
-  if (action === "select-photo") {
-    e.preventDefault();
-    selectProductPhoto(btn.dataset.src, btn);
-  }
-});
-
 async function addToCart(productId) {
-  await api("/api/cart/add", {
-    method: "POST",
-    body: JSON.stringify({ user_id: state.userId, product_id: productId }),
-  });
-  haptic("success");
-  toast(`🛒 ${tr("done")}`);
-  await loadCart(false);
+  try {
+    const data = await api("/api/cart/add", {
+      method: "POST",
+      body: JSON.stringify({ user_id: state.userId, product_id: productId }),
+    });
+    updateCartState(data);
+    haptic("success");
+    toast(`🛒 ${tr("done")}`);
+  } catch (e) {
+    toast(e.message || "Cart error");
+  }
+}
+
+function updateCartState(data, renderCartIfActive = true) {
+  state.cart = data || { items: [], total: 0 };
+  const count = (state.cart.items || []).reduce((s, i) => s + Number(i.qty || 0), 0);
+  $("cartBadge").textContent = count;
+  $("cartBadge").classList.toggle("hidden", count === 0);
+  refreshProductCartButtons();
+  if (renderCartIfActive && $("cart")?.classList.contains("active")) {
+    renderCart(state.cart);
+  }
 }
 
 async function toggleFavorite(productId) {
@@ -521,10 +480,7 @@ async function toggleFavorite(productId) {
 
 async function loadCart(render = true) {
   const data = await api(`/api/cart/${state.userId}`);
-  state.cart = data;
-  const count = data.items.reduce((s, i) => s + Number(i.qty || 0), 0);
-  $("cartBadge").textContent = count;
-  $("cartBadge").classList.toggle("hidden", count === 0);
+  updateCartState(data, false);
   if (render) renderCart(data);
 }
 
@@ -548,7 +504,9 @@ function renderCart(data) {
         </div>
       </div>
       <div class="qty">
-        <button onclick="changeQty(${i.product_id}, -1)">−</button>
+        ${Number(i.qty || 0) === 1
+          ? `<button class="trash" title="${tr("removeFromCart")}" onclick="confirmRemoveFromCart(${i.product_id})">🗑</button>`
+          : `<button onclick="changeQty(${i.product_id}, -1)">−</button>`}
         <span>${i.qty}</span>
         <button onclick="changeQty(${i.product_id}, 1)">+</button>
       </div>
@@ -559,12 +517,40 @@ function renderCart(data) {
 $("reloadCart").addEventListener("click", () => loadCart());
 
 async function changeQty(productId, delta) {
-  const data = await api("/api/cart/qty", {
-    method: "POST",
-    body: JSON.stringify({ user_id: state.userId, product_id: productId, delta }),
-  });
-  renderCart(data);
-  await loadCart(false);
+  try {
+    const data = await api("/api/cart/qty", {
+      method: "POST",
+      body: JSON.stringify({ user_id: state.userId, product_id: productId, delta }),
+    });
+    updateCartState(data);
+  } catch (e) {
+    toast(e.message || "Cart error");
+  }
+}
+
+function confirmRemoveFromCart(productId) {
+  const message = tr("confirmRemove");
+
+  if (tg?.showConfirm) {
+    tg.showConfirm(message, async (confirmed) => {
+      if (confirmed) await removeFromCart(productId);
+    });
+    return;
+  }
+
+  if (window.confirm(message)) {
+    removeFromCart(productId);
+  }
+}
+
+async function removeFromCart(productId) {
+  try {
+    const data = await api(`/api/cart/${state.userId}/${productId}`, { method: "DELETE" });
+    updateCartState(data);
+    toast(`🗑 ${tr("done")}`);
+  } catch (e) {
+    toast(e.message || "Cart error");
+  }
 }
 
 async function applyPromo(productId) {
@@ -574,7 +560,7 @@ async function applyPromo(productId) {
     method: "POST",
     body: JSON.stringify({ user_id: state.userId, product_id: productId, code }),
   });
-  renderCart(res.cart);
+  updateCartState(res.cart);
   toast(res.success ? `🎟 ${tr("done")}` : "❌");
 }
 
