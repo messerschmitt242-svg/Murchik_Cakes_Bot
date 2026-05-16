@@ -735,32 +735,55 @@ for _lang, _words in EXTRA_WORD_MAP.items():
     WORD_MAP.setdefault(_lang, {}).update(_words)
 
 
-PHRASE_TRANSLATIONS = {
-    "Бісквітне тісто с вишневим желе у чорному шоколаді": {
-        "ua": "Бісквітне тісто з вишневим желе у чорному шоколаді",
-        "ru": "Бисквитное тесто с вишневым желе в черном шоколаде",
-        "pl": "Biszkoptowe ciasto z wiśniowym żelem w ciemnej czekoladzie",
-        "en": "Sponge dough with cherry jelly in dark chocolate",
-    },
-    "Бісквітне тісто з вишневим желе у чорному шоколаді": {
-        "ua": "Бісквітне тісто з вишневим желе у чорному шоколаді",
-        "ru": "Бисквитное тесто с вишневым желе в черном шоколаде",
-        "pl": "Biszkoptowe ciasto z wiśniowym żelem w ciemnej czekoladzie",
-        "en": "Sponge dough with cherry jelly in dark chocolate",
-    },
-    "Класичні еклери с масляним кремом": {
-        "ua": "Класичні еклери з масляним кремом",
-        "ru": "Классические эклеры с масляным кремом",
-        "pl": "Klasyczne eklery z kremem maślanym",
-        "en": "Classic eclairs with butter cream",
-    },
-    "Класичні еклери з масляним кремом": {
-        "ua": "Класичні еклери з масляним кремом",
-        "ru": "Классические эклеры с масляным кремом",
-        "pl": "Klasyczne eklery z kremem maślanym",
-        "en": "Classic eclairs with butter cream",
-    },
-}
+KNOWN_PRODUCT_NAME_TRANSLATIONS = {'Торт Kyiv': {'ua': 'Торт Kyiv', 'ru': 'Торт Kyiv', 'pl': 'Tort Kyiv', 'en': 'Cake Kyiv'},
+ 'Тістечка Éclair Pur': {'ua': 'Тістечка Éclair Pur', 'ru': 'Пирожные Éclair Pur', 'pl': 'Ciastka Éclair Pur', 'en': 'Pastries Éclair Pur'},
+ 'Тістечка Night Bloom': {'ua': 'Тістечка Night Bloom', 'ru': 'Пирожные Night Bloom', 'pl': 'Ciastka Night Bloom', 'en': 'Pastries Night Bloom'},
+ 'Торт Napoleon': {'ua': 'Торт Napoleon', 'ru': 'Торт Napoleon', 'pl': 'Tort Napoleon', 'en': 'Cake Napoleon'},
+ 'Торт Amber': {'ua': 'Торт Amber', 'ru': 'Торт Amber', 'pl': 'Tort Amber', 'en': 'Cake Amber'},
+ 'Торт Fresa': {'ua': 'Торт Fresa', 'ru': 'Торт Fresa', 'pl': 'Tort Fresa', 'en': 'Cake Fresa'},
+ 'Торт Framboise': {'ua': 'Торт Framboise', 'ru': 'Торт Framboise', 'pl': 'Tort Framboise', 'en': 'Cake Framboise'},
+ 'Торт Sacher': {'ua': 'Торт Sacher', 'ru': 'Торт Sacher', 'pl': 'Tort Sacher', 'en': 'Cake Sacher'},
+ 'Торт Schoko-Genuss': {'ua': 'Торт Schoko-Genuss', 'ru': 'Торт Schoko-Genuss', 'pl': 'Tort Schoko-Genuss', 'en': 'Cake Schoko-Genuss'},
+ 'Торт Stracciatella': {'ua': 'Торт Stracciatella', 'ru': 'Торт Stracciatella', 'pl': 'Tort Stracciatella', 'en': 'Cake Stracciatella'},
+ 'Торт Schwarzwald': {'ua': 'Торт Schwarzwald', 'ru': 'Торт Schwarzwald', 'pl': 'Tort Schwarzwald', 'en': 'Cake Schwarzwald'},
+ 'Торт Spartakos': {'ua': 'Торт Spartakos', 'ru': 'Торт Spartakos', 'pl': 'Tort Spartakos', 'en': 'Cake Spartakos'},
+ 'Tort Noir': {'ua': 'Торт Noir', 'ru': 'Торт Noir', 'pl': 'Tort Noir', 'en': 'Cake Noir'},
+ 'Тістечка Petit Plaisir': {'ua': 'Тістечка Petit Plaisir', 'ru': 'Пирожные Petit Plaisir', 'pl': 'Ciastka Petit Plaisir', 'en': 'Pastries Petit Plaisir'},
+ 'Тістечка Velours': {'ua': 'Тістечка Velours', 'ru': 'Пирожные Velours', 'pl': 'Ciastka Velours', 'en': 'Pastries Velours'}}
+
+KNOWN_PRODUCT_DESCRIPTION_TRANSLATIONS = {'Класичний київський торт': {'ua': 'Класичний київський торт', 'ru': 'Классический киевский торт', 'pl': 'Klasyczny tort kijowski', 'en': 'Classic Kyiv cake'},
+ 'Класичні еклери з масляним кремом': {'ua': 'Класичні еклери з масляним кремом', 'ru': 'Классические эклеры с масляным кремом', 'pl': 'Klasyczne eklery z kremem maślanym', 'en': 'Classic eclairs with buttercream'},
+ 'Бісквітне тісто з вишневим желе у чорному шоколаді': {'ua': 'Бісквітне тісто з вишневим желе у чорному шоколаді', 'ru': 'Бисквитное тесто с вишневым желе в черном шоколаде', 'pl': 'Biszkoptowe ciasto z wiśniową galaretką w ciemnej czekoladzie', 'en': 'Sponge pastry with cherry jelly in dark chocolate'},
+ 'Коржі з листкового тіста з заварним кремом': {'ua': 'Коржі з листкового тіста з заварним кремом', 'ru': 'Коржи из слоёного теста с заварным кремом', 'pl': 'Blaty z ciasta francuskiego z kremem budyniowym', 'en': 'Puff pastry layers with custard cream'},
+ 'Медові коржі з сметанковим/вершковим кремом': {'ua': 'Медові коржі з сметанковим/вершковим кремом', 'ru': 'Медовые коржи со сметанным/сливочным кремом', 'pl': 'Miodowe blaty z kremem śmietanowym/maślanym', 'en': 'Honey cake layers with sour cream/buttercream'},
+ 'Бісквітний торт з полуничним пломбіром': {'ua': 'Бісквітний торт з полуничним пломбіром', 'ru': 'Бисквитный торт с клубничным пломбиром', 'pl': 'Tort biszkoptowy z truskawkowym kremem plombir', 'en': 'Sponge cake with strawberry plombir cream'},
+ 'Бісквітний торт з малиновим пломбіром': {'ua': 'Бісквітний торт з малиновим пломбіром', 'ru': 'Бисквитный торт с малиновым пломбиром', 'pl': 'Tort biszkoptowy z malinowym kremem plombir', 'en': 'Sponge cake with raspberry plombir cream'},
+ 'Шоколадний торт з абрикосовим джемом': {'ua': 'Шоколадний торт з абрикосовим джемом', 'ru': 'Шоколадный торт с абрикосовым джемом', 'pl': 'Tort czekoladowy z dżemem morelowym', 'en': 'Chocolate cake with apricot jam'},
+ 'Тричі шоколадний торт': {'ua': 'Тричі шоколадний торт', 'ru': 'Трижды шоколадный торт', 'pl': 'Potrójnie czekoladowy tort', 'en': 'Triple chocolate cake'},
+ 'Пломбір з шоколадною крошкою': {'ua': 'Пломбір з шоколадною крошкою', 'ru': 'Пломбир с шоколадной крошкой', 'pl': 'Krem plombir z kawałkami czekolady', 'en': 'Plombir cream with chocolate chips'},
+ 'Вишня-Шоколад': {'ua': 'Вишня-Шоколад', 'ru': 'Вишня-Шоколад', 'pl': 'Wiśnia-Czekolada', 'en': 'Cherry-Chocolate'},
+ 'Шоколадний медовик': {'ua': 'Шоколадний медовик', 'ru': 'Шоколадный медовик', 'pl': 'Czekoladowy miodownik', 'en': 'Chocolate honey cake'},
+ 'Шоколадні коржі з шоколадним заварним кремом': {'ua': 'Шоколадні коржі з шоколадним заварним кремом', 'ru': 'Шоколадные коржи с шоколадным заварным кремом', 'pl': 'Czekoladowe blaty z czekoladowym kremem budyniowym', 'en': 'Chocolate cake layers with chocolate custard cream'},
+ 'Профітролі з заварним кремом': {'ua': 'Профітролі з заварним кремом', 'ru': 'Профитроли с заварным кремом', 'pl': 'Profiterole z kremem budyniowym', 'en': 'Profiteroles with custard cream'},
+ 'Класичне тістечко "Картопля"': {'ua': 'Класичне тістечко "Картопля"', 'ru': 'Классическое пирожное «Картошка»', 'pl': 'Klasyczne ciastko „Kartofelek”', 'en': 'Classic “Kartoshka” pastry'}}
+
+PHRASE_TRANSLATIONS = {'Бісквітне тісто с вишневим желе у чорному шоколаді': {'ua': 'Бісквітне тісто з вишневим желе у чорному шоколаді', 'ru': 'Бисквитное тесто с вишневым желе в черном шоколаде', 'pl': 'Biszkoptowe ciasto z wiśniową galaretką w ciemnej czekoladzie', 'en': 'Sponge pastry with cherry jelly in dark chocolate'},
+ 'Класичні еклери с масляним кремом': {'ua': 'Класичні еклери з масляним кремом', 'ru': 'Классические эклеры с масляным кремом', 'pl': 'Klasyczne eklery z kremem maślanym', 'en': 'Classic eclairs with buttercream'},
+ 'Класичний київський торт': {'ua': 'Класичний київський торт', 'ru': 'Классический киевский торт', 'pl': 'Klasyczny tort kijowski', 'en': 'Classic Kyiv cake'},
+ 'Класичні еклери з масляним кремом': {'ua': 'Класичні еклери з масляним кремом', 'ru': 'Классические эклеры с масляным кремом', 'pl': 'Klasyczne eklery z kremem maślanym', 'en': 'Classic eclairs with buttercream'},
+ 'Бісквітне тісто з вишневим желе у чорному шоколаді': {'ua': 'Бісквітне тісто з вишневим желе у чорному шоколаді', 'ru': 'Бисквитное тесто с вишневым желе в черном шоколаде', 'pl': 'Biszkoptowe ciasto z wiśniową galaretką w ciemnej czekoladzie', 'en': 'Sponge pastry with cherry jelly in dark chocolate'},
+ 'Коржі з листкового тіста з заварним кремом': {'ua': 'Коржі з листкового тіста з заварним кремом', 'ru': 'Коржи из слоёного теста с заварным кремом', 'pl': 'Blaty z ciasta francuskiego z kremem budyniowym', 'en': 'Puff pastry layers with custard cream'},
+ 'Медові коржі з сметанковим/вершковим кремом': {'ua': 'Медові коржі з сметанковим/вершковим кремом', 'ru': 'Медовые коржи со сметанным/сливочным кремом', 'pl': 'Miodowe blaty z kremem śmietanowym/maślanym', 'en': 'Honey cake layers with sour cream/buttercream'},
+ 'Бісквітний торт з полуничним пломбіром': {'ua': 'Бісквітний торт з полуничним пломбіром', 'ru': 'Бисквитный торт с клубничным пломбиром', 'pl': 'Tort biszkoptowy z truskawkowym kremem plombir', 'en': 'Sponge cake with strawberry plombir cream'},
+ 'Бісквітний торт з малиновим пломбіром': {'ua': 'Бісквітний торт з малиновим пломбіром', 'ru': 'Бисквитный торт с малиновым пломбиром', 'pl': 'Tort biszkoptowy z malinowym kremem plombir', 'en': 'Sponge cake with raspberry plombir cream'},
+ 'Шоколадний торт з абрикосовим джемом': {'ua': 'Шоколадний торт з абрикосовим джемом', 'ru': 'Шоколадный торт с абрикосовым джемом', 'pl': 'Tort czekoladowy z dżemem morelowym', 'en': 'Chocolate cake with apricot jam'},
+ 'Тричі шоколадний торт': {'ua': 'Тричі шоколадний торт', 'ru': 'Трижды шоколадный торт', 'pl': 'Potrójnie czekoladowy tort', 'en': 'Triple chocolate cake'},
+ 'Пломбір з шоколадною крошкою': {'ua': 'Пломбір з шоколадною крошкою', 'ru': 'Пломбир с шоколадной крошкой', 'pl': 'Krem plombir z kawałkami czekolady', 'en': 'Plombir cream with chocolate chips'},
+ 'Вишня-Шоколад': {'ua': 'Вишня-Шоколад', 'ru': 'Вишня-Шоколад', 'pl': 'Wiśnia-Czekolada', 'en': 'Cherry-Chocolate'},
+ 'Шоколадний медовик': {'ua': 'Шоколадний медовик', 'ru': 'Шоколадный медовик', 'pl': 'Czekoladowy miodownik', 'en': 'Chocolate honey cake'},
+ 'Шоколадні коржі з шоколадним заварним кремом': {'ua': 'Шоколадні коржі з шоколадним заварним кремом', 'ru': 'Шоколадные коржи с шоколадным заварным кремом', 'pl': 'Czekoladowe blaty z czekoladowym kremem budyniowym', 'en': 'Chocolate cake layers with chocolate custard cream'},
+ 'Профітролі з заварним кремом': {'ua': 'Профітролі з заварним кремом', 'ru': 'Профитроли с заварным кремом', 'pl': 'Profiterole z kremem budyniowym', 'en': 'Profiteroles with custard cream'},
+ 'Класичне тістечко "Картопля"': {'ua': 'Класичне тістечко "Картопля"', 'ru': 'Классическое пирожное «Картошка»', 'pl': 'Klasyczne ciastko „Kartofelek”', 'en': 'Classic “Kartoshka” pastry'}}
 
 
 # First-word aliases. This fixes old items that were named as
@@ -829,6 +852,10 @@ def _translate_words(text: str, lang: str) -> str:
 
 
 def translate_product_name_raw(name: str, lang: str) -> str:
+    cleaned = (name or "").strip()
+    if cleaned in KNOWN_PRODUCT_NAME_TRANSLATIONS:
+        return KNOWN_PRODUCT_NAME_TRANSLATIONS[cleaned].get(lang, cleaned)
+
     first, rest = _split_first_word(name)
     key = first.lower()
 
@@ -841,6 +868,8 @@ def translate_product_name_raw(name: str, lang: str) -> str:
 
 def translate_description_raw(text: str, lang: str) -> str:
     cleaned = (text or "").strip()
+    if cleaned in KNOWN_PRODUCT_DESCRIPTION_TRANSLATIONS:
+        return KNOWN_PRODUCT_DESCRIPTION_TRANSLATIONS[cleaned].get(lang, cleaned)
     if cleaned in PHRASE_TRANSLATIONS:
         return PHRASE_TRANSLATIONS[cleaned].get(lang, cleaned)
     return _translate_words(text, lang)
