@@ -6,11 +6,21 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "").strip().lstrip("@")
 
-ADMIN_IDS = [
-    int(admin_id)
-    for admin_id in os.getenv("ADMIN_IDS", "").split(",")
-    if admin_id.strip()
-]
+
+def _parse_admin_ids(raw: str) -> list[int]:
+    ids: list[int] = []
+    for part in (raw or "").replace(";", ",").split(","):
+        value = part.strip()
+        if not value:
+            continue
+        try:
+            ids.append(int(value))
+        except ValueError:
+            print(f"CONFIG WARNING: skipped invalid ADMIN_IDS value: {value!r}")
+    return ids
+
+
+ADMIN_IDS = _parse_admin_ids(os.getenv("ADMIN_IDS", ""))
 
 
 def is_admin(user_id: int) -> bool:

@@ -420,12 +420,17 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
                 headers={"Content-Type": "application/json"},
             )
             resp = conn.getresponse()
-            resp.read()
+            response_body = resp.read().decode("utf-8", errors="replace")
+            status = resp.status
             conn.close()
-            if 200 <= resp.status < 300:
+            if 200 <= status < 300:
                 success += 1
+            else:
+                print(f"ADMIN NOTIFY ERROR {admin_id}: HTTP {status} {response_body}")
         except Exception as exc:
             print(f"ADMIN NOTIFY ERROR {admin_id}: {exc}")
+    if success == 0:
+        print("ADMIN NOTIFY WARNING: no admin received the order notification. Check ADMIN_IDS and make sure each admin has opened the bot at least once.")
     return success
 
 

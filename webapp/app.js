@@ -74,7 +74,7 @@ const I18N = {
     sendReview: "Надіслати відгук", reviewText: "Ваш відгук", sendCustom: "Надіслати замовлення",
     customDescription: "Опишіть, що саме потрібно", productReviews: "Відгуки про товар",
     addReview: "Залишити відгук", promo: "Промокод", applyPromo: "Застосувати",
-    required: "Заповніть обов'язкові поля", done: "Готово", status: "Статус", portion: "Порція", removeFavorite: "Видалити з обраного", leaveOrderReview: "Залишити відгук", confirmReview: "Підтвердити", product: "Товар", removeFromCart: "Удалить из корзины", confirmRemove: "Вы точно хотите удалить товар из корзины?", yes: "Да", no: "Нет", removeFromCart: "Видалити з кошика", confirmRemove: "Ви точно хочете видалити товар з кошика?", yes: "Так", no: "Ні",
+    required: "Заповніть обов'язкові поля", done: "Готово", status: "Статус", portion: "Порція", removeFavorite: "Видалити з обраного", leaveOrderReview: "Залишити відгук", confirmReview: "Підтвердити", product: "Товар", removeFromCart: "Удалить из корзины", confirmRemove: "Вы точно хотите удалить товар из корзины?", yes: "Да", no: "Нет", removeFromCart: "Видалити з кошика", confirmRemove: "Ви точно хочете видалити товар з кошика?", yes: "Так", no: "Ні", cancelOrder: "Скасувати замовлення", cancelOrderInfo: "Щоб скасувати замовлення, будь ласка, звʼяжіться з нами за номером телефону. Адміністратор перевірить замовлення і скасує його вручну.", goContacts: "Перейти в контакти", close: "Закрити",
   },
   ru: {
     subtitle: "Кондитерская в Telegram",
@@ -90,7 +90,7 @@ const I18N = {
     sendReview: "Отправить отзыв", reviewText: "Ваш отзыв", sendCustom: "Отправить заказ",
     customDescription: "Опишите, что именно нужно", productReviews: "Отзывы о товаре",
     addReview: "Оставить отзыв", promo: "Промокод", applyPromo: "Применить",
-    required: "Заполните обязательные поля", done: "Готово", status: "Статус", portion: "Порция", removeFavorite: "Удалить из избранного", leaveOrderReview: "Оставить отзыв", confirmReview: "Подтвердить", product: "Товар",
+    required: "Заполните обязательные поля", done: "Готово", status: "Статус", portion: "Порция", removeFavorite: "Удалить из избранного", leaveOrderReview: "Оставить отзыв", confirmReview: "Подтвердить", product: "Товар", removeFromCart: "Удалить из корзины", confirmRemove: "Вы точно хотите удалить товар из корзины?", yes: "Да", no: "Нет", cancelOrder: "Отменить заказ", cancelOrderInfo: "Чтобы отменить заказ, пожалуйста, свяжитесь с нами по номеру телефона. Администратор проверит заказ и отменит его вручную.", goContacts: "Перейти в контакты", close: "Закрыть",
   },
   pl: {
     subtitle: "Cukiernia w Telegramie",
@@ -106,7 +106,7 @@ const I18N = {
     sendReview: "Wyślij opinię", reviewText: "Twoja opinia", sendCustom: "Wyślij zamówienie",
     customDescription: "Opisz, czego potrzebujesz", productReviews: "Opinie o produkcie",
     addReview: "Dodaj opinię", promo: "Kod promo", applyPromo: "Zastosuj",
-    required: "Wypełnij wymagane pola", done: "Gotowe", status: "Status", portion: "Porcja", removeFavorite: "Usuń z ulubionych", leaveOrderReview: "Dodaj opinię", confirmReview: "Potwierdź", product: "Produkt", removeFromCart: "Usuń z koszyka", confirmRemove: "Na pewno usunąć produkt z koszyka?", yes: "Tak", no: "Nie",
+    required: "Wypełnij wymagane pola", done: "Gotowe", status: "Status", portion: "Porcja", removeFavorite: "Usuń z ulubionych", leaveOrderReview: "Dodaj opinię", confirmReview: "Potwierdź", product: "Produkt", removeFromCart: "Usuń z koszyka", confirmRemove: "Na pewno usunąć produkt z koszyka?", yes: "Tak", no: "Nie", cancelOrder: "Anuluj zamówienie", cancelOrderInfo: "Aby anulować zamówienie, skontaktuj się z nami telefonicznie. Administrator sprawdzi zamówienie i anuluje je ręcznie.", goContacts: "Przejdź do kontaktu", close: "Zamknij",
   },
   en: {
     subtitle: "Bakery in Telegram",
@@ -122,7 +122,7 @@ const I18N = {
     sendReview: "Send review", reviewText: "Your review", sendCustom: "Send order",
     customDescription: "Describe what you need", productReviews: "Product reviews",
     addReview: "Leave review", promo: "Promo code", applyPromo: "Apply",
-    required: "Fill required fields", done: "Done", status: "Status", portion: "Portion", removeFavorite: "Remove from favorites", leaveOrderReview: "Leave review", confirmReview: "Confirm", product: "Product", removeFromCart: "Remove from cart", confirmRemove: "Are you sure you want to remove this item from the cart?", yes: "Yes", no: "No",
+    required: "Fill required fields", done: "Done", status: "Status", portion: "Portion", removeFavorite: "Remove from favorites", leaveOrderReview: "Leave review", confirmReview: "Confirm", product: "Product", removeFromCart: "Remove from cart", confirmRemove: "Are you sure you want to remove this item from the cart?", yes: "Yes", no: "No", cancelOrder: "Cancel order", cancelOrderInfo: "To cancel the order, please contact us by phone. The administrator will check the order and cancel it manually.", goContacts: "Go to contacts", close: "Close",
   }
 };
 
@@ -710,14 +710,38 @@ async function loadOrders() {
       ${o.comment ? `<div class="muted">💬 ${tr("comment")}: ${o.comment}</div>` : ""}
       ${o.items ? `<div class="muted">🧁 ${o.items.map(i => `${i.display_name || i.name} ×${i.qty}`).join("<br>")}</div>` : ""}
       ${o.description ? `<div class="muted">📝 ${o.description}</div>` : ""}
+      ${o.type === "regular" && canRequestOrderCancel(o.status) ? `<button class="secondary cancel-order-btn" onclick='showCancelOrderInfo(${JSON.stringify(o).replaceAll("'", "&apos;")})'>❌ ${tr("cancelOrder")}</button>` : ""}
       ${o.type === "regular" && isCompletedOrder(o.status) && o.items && o.items.length ? `<button class="primary" onclick='startOrderReview(${JSON.stringify(o).replaceAll("'", "&apos;")})'>💬 ${tr("leaveOrderReview")}</button>` : ""}
     </div>
   `).join("") : `<div class="empty">📦 ${tr("empty")}</div>`;
 }
 
 
+function showCancelOrderInfo(order) {
+  $("modalContent").innerHTML = `
+    <h2>❌ ${tr("cancelOrder")} #${order.id}</h2>
+    <p>${tr("cancelOrderInfo")}</p>
+    <div class="confirm-actions">
+      <button class="primary" onclick="goToContactsFromCancel()">📍 ${tr("goContacts")}</button>
+      <button class="secondary" onclick="closeConfirmationModal()">✖️ ${tr("close")}</button>
+    </div>
+  `;
+  $("modal").classList.remove("hidden");
+}
+
+function goToContactsFromCancel() {
+  closeConfirmationModal();
+  showTab("more");
+  hidePanels();
+  $("contactsPanel").classList.remove("hidden");
+}
+
 function isCompletedOrder(status) {
   return ["Завершено", "Завершений", "Completed", "completed"].includes(status);
+}
+
+function canRequestOrderCancel(status) {
+  return ["Прийнято", "Accepted", "accepted"].includes(status);
 }
 
 let orderReviewState = null;

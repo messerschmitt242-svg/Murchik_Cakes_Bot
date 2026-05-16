@@ -7,6 +7,7 @@ STATUSES = [
     "Готується",
     "Готове до видачі",
     "Завершено",
+    "Скасовано",
 ]
 
 
@@ -110,7 +111,7 @@ def get_active_orders():
         """
         SELECT id, user_id, name, phone, items, total, status, order_date, delivery_method, payment_method, comment, created_at
         FROM orders
-        WHERE status != 'Завершено'
+        WHERE status NOT IN ('Завершено', 'Скасовано')
         ORDER BY id DESC
         """
     )
@@ -153,6 +154,23 @@ def next_status(current_status: str):
     if current_status == "Готове до видачі":
         return "Завершено", "🏁 Завершено"
     return None, None
+
+
+def can_cancel_order(status: str) -> bool:
+    return status == "Прийнято"
+
+
+def cancel_order(order_id: int) -> bool:
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE orders SET status = ? WHERE id = ? AND status = ?",
+        ("Скасовано", order_id, "Прийнято"),
+    )
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed
 
 
 def format_items(raw_items: str) -> str:

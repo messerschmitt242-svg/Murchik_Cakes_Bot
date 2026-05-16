@@ -26,7 +26,12 @@ from handlers.products import (
     show_product_detail,
     catalog_back,
 )
-from handlers.my_orders import my_orders
+from handlers.my_orders import (
+    my_orders,
+    show_user_cancel_order_info,
+    show_user_cancel_contacts,
+    close_user_cancel_info,
+)
 from handlers.admin_orders import (
     list_orders,
     set_status,
@@ -35,6 +40,7 @@ from handlers.admin_orders import (
     show_admin_custom_order,
     advance_order_status,
     advance_custom_order_status,
+    cancel_admin_order,
 )
 from handlers.delete_product import delete_product, delete_product_callback
 from handlers.promo import (
@@ -345,6 +351,12 @@ def build_app():
     app.add_handler(CallbackQueryHandler(show_admin_custom_order, pattern=r"^admin_custom_order_\d+$"))
     app.add_handler(CallbackQueryHandler(advance_order_status, pattern=r"^admin_next_status_\d+$"))
     app.add_handler(CallbackQueryHandler(advance_custom_order_status, pattern=r"^admin_next_custom_status_\d+$"))
+    app.add_handler(CallbackQueryHandler(cancel_admin_order, pattern=r"^admin_cancel_order_\d+$"))
+
+    # Inline-кнопки пользовательских заказов
+    app.add_handler(CallbackQueryHandler(show_user_cancel_order_info, pattern=r"^user_cancel_order_\d+$"))
+    app.add_handler(CallbackQueryHandler(show_user_cancel_contacts, pattern="^user_cancel_contacts$"))
+    app.add_handler(CallbackQueryHandler(close_user_cancel_info, pattern="^user_cancel_close$"))
 
     # Inline-кнопки корзины
     app.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_\d+$"))
