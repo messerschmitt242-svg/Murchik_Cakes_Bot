@@ -553,7 +553,7 @@ function renderCart(data) {
   const promoBlock = `
     <div class="cart-promo-block">
       <input id="promo_order" placeholder="${tr("promo")}" style="padding:9px;margin:0" value="${promo?.code || ""}">
-      <button class="secondary" onclick="applyPromo()">${tr("applyPromo")}</button>
+      <button class="primary promo-apply-btn" onclick="applyPromo()">${tr("applyPromo")}</button>
     </div>
     ${promo ? `<div class="muted">🎟 ${promo.code}: -${promo.percent}% до всього замовлення</div>` : ""}
   `;

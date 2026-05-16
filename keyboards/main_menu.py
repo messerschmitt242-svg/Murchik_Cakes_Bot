@@ -1,4 +1,4 @@
-from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton, WebAppInfo
 from config import is_admin, WEBAPP_URL
 
 
@@ -9,20 +9,19 @@ def _webapp_row():
 
 
 def get_main_menu(user_id: int | None = None):
-    keyboard = [_webapp_row()]
+    """Main chat keyboard.
+
+    Users work with the shop through the Telegram Mini App menu button,
+    so the bot chat menu stays clean. Admins see only the Admin Panel entry.
+    """
 
     if user_id is not None and is_admin(user_id):
-        keyboard.extend([
-            ["🛠 Адмін-панель"],
-            ["📋 Активні замовлення", "🎟 Промокоди"],
-            ["➕ Додати продукт", "🖼 Оновити фото"],
-            ["🗑 Видалити продукт"],
-        ])
+        return ReplyKeyboardMarkup(
+            [["🛠 Адмін-панель"]],
+            resize_keyboard=True,
+        )
 
-    return ReplyKeyboardMarkup(
-        keyboard,
-        resize_keyboard=True,
-    )
+    return ReplyKeyboardRemove()
 
 
-main_menu = get_main_menu()
+main_menu = ReplyKeyboardRemove()

@@ -376,3 +376,41 @@ img.loading-img{opacity:.35}
 .order-spaced-line {
   margin-top: 8px;
 }
+
+
+/* v3.9 Final UI polish: aligned product cards, styled action buttons, clickable phone */
+.grid{align-items:stretch}
+.card{display:flex;flex-direction:column;height:100%}
+.card .image-button{flex:0 0 auto}
+.card h3,.card .rating,.card p,.card .price,.card .muted{flex:0 0 auto}
+.card .actions{margin-top:auto;padding-top:10px}
+.cart-promo-block .promo-apply-btn{
+  width:auto;
+  min-width:132px;
+  margin:0;
+  border-radius:16px;
+  padding:11px 14px;
+  box-shadow:0 8px 22px rgba(80,35,20,.08);
+}
+.cancel-order-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  border:0;
+  border-radius:16px;
+  padding:11px 12px;
+  font-weight:700;
+  text-align:center;
+  box-shadow:0 8px 22px rgba(80,35,20,.08);
+}
+.contact-phone{
+  color:var(--tg-theme-link-color,var(--tg-theme-button-color,#2b1714));
+  font-weight:700;
+  text-decoration:none;
+}
+.contact-phone:active{opacity:.75}
+@media (max-width:430px){
+  .cart-promo-block{grid-template-columns:1fr}
+  .cart-promo-block .promo-apply-btn{width:100%}
+}
