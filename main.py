@@ -180,7 +180,7 @@ def build_app():
 
     update_photos_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^🖼 Оновити фото$"), update_photos_start),
+            MessageHandler(filters.Regex(r"^🖼 Оновити фото( продукту)?$"), update_photos_start),
             CommandHandler("update_photos", update_photos_start),
             CallbackQueryHandler(update_photos_start, pattern="^admin_panel_update_photos$"),
         ],
@@ -315,10 +315,13 @@ def build_app():
     app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
     app.add_handler(CallbackQueryHandler(pickup_info, pattern=r"^pickup_(order|custom_order)_\d+$"))
 
-    # Адмінські приховані кнопки головного меню
+    # Адмінські кнопки головного меню
     app.add_handler(MessageHandler(filters.Regex("^🗑 Видалити продукт$"), delete_product))
     app.add_handler(MessageHandler(filters.Regex("^🎟 Промокоди$"), promo_menu))
-    app.add_handler(MessageHandler(filters.Regex("^🛠 Адмін-панель$"), admin_panel))
+    app.add_handler(MessageHandler(filters.Regex("^📦 Усі замовлення$"), list_orders))
+    app.add_handler(MessageHandler(filters.Regex("^💬 Відгуки$"), show_reviews_admin))
+    app.add_handler(MessageHandler(filters.Regex("^🌐 Оновити переклади$"), regenerate_translations))
+    app.add_handler(MessageHandler(filters.Regex("^🧹 Очистити тестові дані$"), clear_test_data))
 
     # Диалоги должны стоять выше обычных текстовых кнопок
     app.add_handler(add_product_handler)
