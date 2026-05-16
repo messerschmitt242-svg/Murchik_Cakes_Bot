@@ -44,7 +44,7 @@ def get_user_orders(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status, created_at
         FROM orders
         WHERE user_id = ?
         ORDER BY id DESC

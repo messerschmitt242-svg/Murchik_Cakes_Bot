@@ -44,7 +44,7 @@ const I18N = {
     sendReview: "Надіслати відгук", reviewText: "Ваш відгук", sendCustom: "Надіслати замовлення",
     customDescription: "Опишіть, що саме потрібно", productReviews: "Відгуки про товар",
     addReview: "Залишити відгук", promo: "Промокод", applyPromo: "Застосувати",
-    required: "Заповніть обов'язкові поля", done: "Готово", status: "Статус", portion: "Порція",
+    required: "Заповніть обов'язкові поля", done: "Готово", status: "Статус", portion: "Порція", removeFavorite: "Видалити з обраного", leaveOrderReview: "Залишити відгук", confirmReview: "Підтвердити", product: "Товар",
   },
   ru: {
     subtitle: "Кондитерская в Telegram",
@@ -60,7 +60,7 @@ const I18N = {
     sendReview: "Отправить отзыв", reviewText: "Ваш отзыв", sendCustom: "Отправить заказ",
     customDescription: "Опишите, что именно нужно", productReviews: "Отзывы о товаре",
     addReview: "Оставить отзыв", promo: "Промокод", applyPromo: "Применить",
-    required: "Заполните обязательные поля", done: "Готово", status: "Статус", portion: "Порция",
+    required: "Заполните обязательные поля", done: "Готово", status: "Статус", portion: "Порция", removeFavorite: "Удалить из избранного", leaveOrderReview: "Оставить отзыв", confirmReview: "Подтвердить", product: "Товар",
   },
   pl: {
     subtitle: "Cukiernia w Telegramie",
@@ -76,7 +76,7 @@ const I18N = {
     sendReview: "Wyślij opinię", reviewText: "Twoja opinia", sendCustom: "Wyślij zamówienie",
     customDescription: "Opisz, czego potrzebujesz", productReviews: "Opinie o produkcie",
     addReview: "Dodaj opinię", promo: "Kod promo", applyPromo: "Zastosuj",
-    required: "Wypełnij wymagane pola", done: "Gotowe", status: "Status", portion: "Porcja",
+    required: "Wypełnij wymagane pola", done: "Gotowe", status: "Status", portion: "Porcja", removeFavorite: "Usuń z ulubionych", leaveOrderReview: "Dodaj opinię", confirmReview: "Potwierdź", product: "Produkt",
   },
   en: {
     subtitle: "Bakery in Telegram",
@@ -92,7 +92,7 @@ const I18N = {
     sendReview: "Send review", reviewText: "Your review", sendCustom: "Send order",
     customDescription: "Describe what you need", productReviews: "Product reviews",
     addReview: "Leave review", promo: "Promo code", applyPromo: "Apply",
-    required: "Fill required fields", done: "Done", status: "Status", portion: "Portion",
+    required: "Fill required fields", done: "Done", status: "Status", portion: "Portion", removeFavorite: "Remove from favorites", leaveOrderReview: "Leave review", confirmReview: "Confirm", product: "Product",
   }
 };
 
@@ -100,8 +100,7 @@ const $ = (id) => document.getElementById(id);
 const tr = (key) => (I18N[state.lang] || I18N.ua)[key] || key;
 
 function setText() {
-  $("subtitle").textContent = tr("subtitle");
-  $("heroTitle").textContent = tr("heroTitle");
+    $("heroTitle").textContent = tr("heroTitle");
   $("heroText").textContent = tr("heroText");
   document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = tr(el.dataset.i18n));
   document.querySelectorAll("[data-placeholder]").forEach(el => el.placeholder = tr(el.dataset.placeholder));
@@ -258,29 +257,16 @@ async function openProduct(id) {
     ${gallery.length > 1 ? `<div class="photo-strip">${gallery.map((src, idx) => `<button class="thumb-button ${idx === 0 ? "active" : ""}" onclick="selectProductPhoto('${src.replaceAll("'", "\\'")}', this)"><img src="${src}" onerror="this.parentElement.style.display='none'"></button>`).join("")}</div>` : ""}
     <h2>${p.display_name || p.name}</h2>
     <p class="muted">${renderStars(p.rating)}</p>
-    ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
     <p>${p.display_description || p.description || ""}</p>
     <h3>${Number(p.price || 0).toFixed(2)} zł</h3>
-    <div class="actions">
+    ${p.portion ? `<p class="muted">📦 ${tr("portion")}: ${p.portion}</p>` : ""}
+    <div class="actions detail-actions">
       <button onclick="addToCart(${p.id})">🛒 ${tr("add")}</button>
-      <button class="secondary" onclick="toggleFavorite(${p.id})">${p.is_favorite ? "💔" : "❤️"} ${tr("favorite")}</button>
+      <button class="secondary" onclick="toggleFavorite(${p.id})">${p.is_favorite ? "💔 " + tr("removeFavorite") : "❤️ " + tr("favorite")}</button>
     </div>
-    <hr>
-    <h3>💬 ${tr("productReviews")}</h3>
-    <div>${renderReviews(reviews)}</div>
-    <div class="form-card">
-      <input id="productReviewName" placeholder="${tr("name")}" value="${state.userName || ""}">
-      <textarea id="productReviewText" placeholder="${tr("reviewText")}"></textarea>
-      <select id="productReviewRating">
-        <option value="5">⭐ 5</option>
-        <option value="4">⭐ 4</option>
-        <option value="3">⭐ 3</option>
-        <option value="2">⭐ 2</option>
-        <option value="1">⭐ 1</option>
-      </select>
-      <button class="primary" onclick="sendProductReview(${p.id}, '${String(p.display_name || p.name).replaceAll("'", "\\'")}')">${tr("sendReview")}</button>
-    </div>
-  `;
+    <hr class="reviews-divider">
+    <h3 class="reviews-title">💬 ${tr("productReviews")}</h3>
+    <div>${renderReviews(reviews)}</div>  `;
   $("modal").classList.remove("hidden");
 }
 
@@ -407,8 +393,82 @@ async function loadOrders() {
       ${o.total ? `<div>${tr("total")}: ${Number(o.total).toFixed(2)} zł</div>` : ""}
       ${o.items ? `<div class="muted">${o.items.map(i => `${i.display_name || i.name} ×${i.qty}`).join("<br>")}</div>` : ""}
       ${o.description ? `<div class="muted">${o.description}</div>` : ""}
+      ${o.type === "regular" && isCompletedOrder(o.status) && o.items && o.items.length ? `<button class="primary" onclick='startOrderReview(${JSON.stringify(o).replaceAll("'", "&apos;")})'>💬 ${tr("leaveOrderReview")}</button>` : ""}
     </div>
   `).join("") : `<div class="empty">📦 ${tr("empty")}</div>`;
+}
+
+function isCompletedOrder(status) {
+  return ["Завершено", "Завершений", "Completed", "completed"].includes(status);
+}
+
+let orderReviewState = null;
+
+function startOrderReview(order) {
+  orderReviewState = {
+    order,
+    index: 0,
+    items: (order.items || []).filter(i => i.product_id),
+  };
+  if (!orderReviewState.items.length) return toast(tr("empty"));
+  showOrderReviewForm();
+}
+
+function showOrderReviewForm() {
+  const stateReview = orderReviewState;
+  const item = stateReview.items[stateReview.index];
+  const customerName = stateReview.order.name || state.userName || "";
+  $("modalContent").innerHTML = `
+    <h2>${tr("leaveOrderReview")}</h2>
+    <div class="form-card">
+      <label>${tr("name")}</label>
+      <input id="orderReviewName" value="${customerName}" readonly>
+      <label>${tr("product")}</label>
+      <input id="orderReviewProduct" value="${item.display_name || item.name}" readonly>
+      <select id="orderReviewRating">
+        <option value="5">⭐ 5</option>
+        <option value="4">⭐ 4</option>
+        <option value="3">⭐ 3</option>
+        <option value="2">⭐ 2</option>
+        <option value="1">⭐ 1</option>
+      </select>
+      <textarea id="orderReviewText" placeholder="${tr("reviewText")}"></textarea>
+      <button class="primary" onclick="submitOrderReview()">${tr("confirmReview")}</button>
+    </div>
+  `;
+  $("modal").classList.remove("hidden");
+}
+
+async function submitOrderReview() {
+  const s = orderReviewState;
+  const item = s.items[s.index];
+  const name = $("orderReviewName").value.trim();
+  const text = $("orderReviewText").value.trim();
+  const rating = Number($("orderReviewRating").value || 5);
+  if (!text) return toast(tr("required"));
+
+  await api("/api/reviews", {
+    method: "POST",
+    body: JSON.stringify({
+      user_id: state.userId,
+      name,
+      text,
+      rating,
+      review_type: "product",
+      product_id: item.product_id,
+      product_name: item.name || item.display_name || "",
+      order_id: s.order.id,
+    }),
+  });
+
+  s.index += 1;
+  if (s.index < s.items.length) {
+    toast(tr("done"));
+    showOrderReviewForm();
+  } else {
+    $("modal").classList.add("hidden");
+    toast(tr("done"));
+  }
 }
 
 $("reloadOrders").addEventListener("click", () => loadOrders());
@@ -473,20 +533,6 @@ $("sendReviewBtn").addEventListener("click", async () => {
   toast(tr("done"));
   await loadReviews();
 });
-
-async function sendProductReview(productId, productName) {
-  const name = $("productReviewName").value.trim() || state.userName || "User";
-  const text = $("productReviewText").value.trim();
-  const rating = Number($("productReviewRating").value);
-  if (!text || text.length < 3) return toast(tr("required"));
-
-  await api("/api/reviews", {
-    method: "POST",
-    body: JSON.stringify({ user_id: state.userId, name, text, rating, review_type: "product", product_id: productId, product_name: productName }),
-  });
-  toast(tr("done"));
-  await openProduct(productId);
-}
 
 $("sendCustomBtn").addEventListener("click", async () => {
   const name = $("customName").value.trim();

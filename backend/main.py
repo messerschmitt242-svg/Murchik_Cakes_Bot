@@ -21,7 +21,7 @@ from database.cart_db import (
     clear_cart_db,
     apply_promo_to_cart_item,
 )
-from database.orders_db import create_order, get_user_orders
+from database.orders_db import create_order, get_user_orders, get_order
 from database.custom_orders_db import create_custom_order_db, get_user_custom_orders
 from database.favorites_db import toggle_favorite_db, get_favorites_db, is_favorite_db
 from database.reviews_db import add_review_db, get_product_reviews_db, get_product_rating_db, get_reviews_db, get_bakery_reviews_db
@@ -30,7 +30,7 @@ from utils_translation import translate_product_name, translate_description, tra
 from database.orders_db import format_items
 from config import BOT_TOKEN
 
-app = FastAPI(title="Murchik Cakes API", version="3.3.0")
+app = FastAPI(title="Murchik Cakes API", version="3.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,6 +88,7 @@ class ReviewRequest(BaseModel):
     review_type: str = "bakery"
     product_id: Optional[int] = None
     product_name: str = ""
+    order_id: Optional[int] = None
 
 
 class LanguageRequest(BaseModel):
@@ -150,10 +151,22 @@ def _localized_order_items(raw_items: str, user_id: int):
         result.append(item)
     return result
 
+def _order_contains_product(order, product_id: int) -> bool:
+    import json
+    try:
+        items = json.loads(order["items"] or "[]")
+    except Exception:
+        return False
+    return any(int(item.get("product_id") or 0) == int(product_id) for item in items)
+
+
+def _completed_status(status: str) -> bool:
+    return status in ("Завершено", "Завершений", "Completed", "done", "completed")
+
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "version": "3.3.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
+    return {"ok": True, "version": "3.4.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
 
 
 @app.get("/api/bootstrap/{user_id}")
@@ -310,6 +323,8 @@ def orders(user_id: int):
     for o in get_user_orders(user_id):
         regular.append({
             "id": o["id"],
+            "name": o["name"],
+            "phone": o["phone"],
             "items": _localized_order_items(o["items"], user_id),
             "total": float(o["total"] or 0),
             "status": o["status"],
@@ -378,6 +393,21 @@ def product_reviews(product_id: int, limit: int = 5):
 def create_review(req: ReviewRequest):
     if req.rating < 1 or req.rating > 5:
         raise HTTPException(400, "Rating must be 1..5")
+
+    if req.review_type == "product":
+        if not req.order_id or not req.product_id:
+            raise HTTPException(400, "Product review requires order_id and product_id")
+
+        order = get_order(req.order_id)
+        if not order:
+            raise HTTPException(404, "Order not found")
+        if int(order["user_id"]) != int(req.user_id):
+            raise HTTPException(403, "This order belongs to another user")
+        if not _completed_status(order["status"]):
+            raise HTTPException(403, "Reviews are available only after order completion")
+        if not _order_contains_product(order, req.product_id):
+            raise HTTPException(400, "This product is not in the selected order")
+
     review_id = add_review_db(
         user_id=req.user_id,
         name=req.name,

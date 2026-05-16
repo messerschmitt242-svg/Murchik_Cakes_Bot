@@ -9,11 +9,7 @@
 </head>
 <body>
   <div id="app">
-    <header class="topbar">
-      <div>
-        <h1 id="appTitle">Murchik Cakes</h1>
-        <p id="subtitle">Telegram Mini App</p>
-      </div>
+    <header class="topbar compact">
       <button id="langBtn" class="round">🌐</button>
     </header>
 
@@ -22,7 +18,7 @@
         <strong id="heroTitle">Fresh cakes and pastries</strong>
         <span id="heroText">Order your favorite desserts in a few taps.</span>
       </div>
-      <span class="hero-icon">🍰</span>
+      <span class="hero-icon">🐱</span>
     </section>
 
     <nav class="tabs">
@@ -55,7 +51,7 @@
           <h3 data-i18n="checkout">Checkout</h3>
           <input id="orderName" data-placeholder="name" placeholder="Name" />
           <input id="orderPhone" data-placeholder="phone" placeholder="Phone" />
-          <input id="orderDate" data-placeholder="date" placeholder="Date" />
+          <input id="orderDate" data-placeholder="date" placeholder="Date" type="date" />
           <textarea id="orderComment" data-placeholder="comment" placeholder="Comment"></textarea>
           <button id="checkoutBtn" class="primary" data-i18n="createOrder">Create order</button>
         </div>
@@ -104,7 +100,7 @@
           <div class="form-card">
             <input id="customName" data-placeholder="name" placeholder="Name" />
             <input id="customPhone" data-placeholder="phone" placeholder="Phone" />
-            <input id="customDate" data-placeholder="date" placeholder="Date" />
+            <input id="customDate" data-placeholder="date" placeholder="Date" type="date" />
             <textarea id="customDescription" data-placeholder="customDescription" placeholder="Describe what you want"></textarea>
             <button id="sendCustomBtn" class="primary" data-i18n="sendCustom">Send custom order</button>
           </div>
