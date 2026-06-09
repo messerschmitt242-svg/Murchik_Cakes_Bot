@@ -1,3 +1,11 @@
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"If 'per_message=False'.*CallbackQueryHandler.*",
+    category=UserWarning,
+)
+
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -10,6 +18,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from database.db import init_db
 from handlers.maintenance import clear_test_data
+from handlers.admin_panel import admin_panel, admin_panel_callback
 from handlers.product_translations import regenerate_translations
 from handlers.home import go_home, go_home_inline
 from handlers.language import language_menu, set_language
@@ -100,6 +109,16 @@ from handlers.reviews import (
     REVIEW_TEXT,
     REVIEW_RATING,
 )
+from handlers.update_photos import (
+    update_photos_start,
+    update_photos_choose_product,
+    update_photos_add_photo,
+    update_photos_finish,
+    update_photos_cancel,
+    UPDATE_PHOTOS_PRODUCT,
+    UPDATE_PHOTOS_UPLOAD,
+)
+
 from handlers.custom_order import (
     custom_order_start,
     custom_get_name,
@@ -131,7 +150,10 @@ def build_app():
     app = Application.builder().token(BOT_TOKEN).build()
 
     add_product_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start)],
+        entry_points=[
+            MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start),
+            CallbackQueryHandler(add_product_start, pattern="^admin_panel_add_product$"),
+        ],
         states={
             ADD_PHOTO: [
                 MessageHandler(filters.PHOTO, add_photo),
@@ -143,6 +165,22 @@ def build_app():
             ADD_CATEGORY: [CallbackQueryHandler(choose_category, pattern="^add_category_")],
         },
         fallbacks=[CommandHandler("cancel", cancel_add_product), CallbackQueryHandler(cancel_add_product, pattern="^cancel_add_product$")],
+        allow_reentry=True,
+    )
+
+    update_photos_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(update_photos_start, pattern="^admin_panel_update_photos$")],
+        states={
+            UPDATE_PHOTOS_PRODUCT: [CallbackQueryHandler(update_photos_choose_product, pattern=r"^update_photos_product_\d+$")],
+            UPDATE_PHOTOS_UPLOAD: [
+                MessageHandler(filters.PHOTO, update_photos_add_photo),
+                CallbackQueryHandler(update_photos_finish, pattern="^update_photos_finish$"),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", update_photos_cancel),
+            CallbackQueryHandler(update_photos_cancel, pattern="^update_photos_cancel$"),
+        ],
         allow_reentry=True,
     )
 
@@ -221,8 +259,10 @@ def build_app():
 
     app.add_handler(MessageHandler(filters.Regex("^🗑️ Видалити продукт$"), delete_product))
     app.add_handler(MessageHandler(filters.Regex("^🎁 Промокоди$"), promo_menu))
+    app.add_handler(MessageHandler(filters.Regex("^🛠 Адмін-панель$"), admin_panel))
 
     app.add_handler(add_product_handler)
+    app.add_handler(update_photos_handler)
     app.add_handler(checkout_handler)
     app.add_handler(cart_promo_handler)
     app.add_handler(promo_handler)
@@ -235,6 +275,8 @@ def build_app():
     app.add_handler(CallbackQueryHandler(toggle_favorite, pattern=r"^favorite_\d+$"))
     app.add_handler(CallbackQueryHandler(show_product_reviews, pattern=r"^product_reviews_\d+$"))
     app.add_handler(CallbackQueryHandler(delete_review_admin, pattern=r"^delete_review_\d+$"))
+
+    app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern=r"^admin_panel_"))
 
     app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
     app.add_handler(CallbackQueryHandler(orders_page, pattern=r"^admin_orders_page_\d+$"))
