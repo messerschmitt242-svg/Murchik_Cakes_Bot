@@ -38,7 +38,7 @@ from database.reviews_db import (
 from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
 from utils_dates import min_order_date_text, validate_order_date
-from services.calendar_links import build_order_ics
+from services.calendar_links import build_order_ics, google_calendar_order_url
 
 app = FastAPI(title="Murchik Cakes API", version="3.6.1-hotfix")
 app.add_middleware(
@@ -395,10 +395,21 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
 {discount_text}
 ────────────
 {items_text}"""
+    calendar_url = google_calendar_order_url(
+        order_id=order_id,
+        customer_name=req.name.strip(),
+        phone=_normalize_phone(req.phone),
+        items_text=items_text,
+        total=total,
+        order_date=req.date,
+        delivery_method=req.delivery_method,
+        payment_method=req.payment_method,
+        comment=req.comment.strip(),
+    )
     reply_markup = {
         "inline_keyboard": [
             [{"text": "📋 Відкрити замовлення", "callback_data": f"admin_order_{order_id}"}],
-            [{"text": "📅 Додати в календар", "callback_data": f"admin_calendar_order_{order_id}"}],
+            [{"text": "📅 Додати в календар", "url": calendar_url}],
         ]
     }
 
