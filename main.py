@@ -10,7 +10,6 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from database.db import init_db
 from handlers.maintenance import clear_test_data
-from handlers.admin_panel import admin_panel, admin_panel_callback
 from handlers.product_translations import regenerate_translations
 from handlers.home import go_home, go_home_inline
 from handlers.language import language_menu, set_language
@@ -20,15 +19,7 @@ from handlers.id import get_id
 from handlers.faq import faq
 from handlers.contacts import contacts
 from handlers.products import show_products, show_category_products, show_product_detail, catalog_back
-from handlers.my_orders import (
-    my_orders,
-    my_orders_page,
-    my_order_detail,
-    my_custom_order_detail,
-    show_user_cancel_order_info,
-    show_user_cancel_contacts,
-    close_user_cancel_info,
-)
+from handlers.my_orders import my_orders
 from handlers.admin_orders import (
     list_orders,
     orders_page,
@@ -71,10 +62,6 @@ from handlers.add_product import (
     ADD_PRICE,
     ADD_DESCRIPTION,
     ADD_CATEGORY,
-    ADD_PORTION,
-    ADD_LABEL,
-    add_portion,
-    add_label,
 )
 from handlers.cart import (
     add_to_cart,
@@ -133,15 +120,6 @@ from handlers.custom_order import (
     CUSTOM_PHOTO,
 )
 
-from handlers.update_photos import (
-    update_photos_start,
-    update_photos_choose_product,
-    update_photos_add_photo,
-    update_photos_finish,
-    update_photos_cancel,
-    UPDATE_PHOTOS_PRODUCT,
-    UPDATE_PHOTOS_UPLOAD,
-)
 
 async def error_handler(update, context):
     print("ERROR:")
@@ -153,10 +131,7 @@ def build_app():
     app = Application.builder().token(BOT_TOKEN).build()
 
     add_product_handler = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start),
-            CallbackQueryHandler(add_product_start, pattern="^admin_panel_add_product$"),
-        ],
+        entry_points=[MessageHandler(filters.Regex("^➕ Додати продукт$"), add_product_start)],
         states={
             ADD_PHOTO: [
                 MessageHandler(filters.PHOTO, add_photo),
@@ -165,9 +140,7 @@ def build_app():
             ADD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)],
             ADD_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price)],
             ADD_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_description)],
-            ADD_CATEGORY: [CallbackQueryHandler(choose_category, pattern="^add_dessert_category_")],
-            ADD_PORTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_portion)],
-            ADD_LABEL: [MessageHandler(filters.PHOTO, add_label)],
+            ADD_CATEGORY: [CallbackQueryHandler(choose_category, pattern="^add_category_")],
         },
         fallbacks=[CommandHandler("cancel", cancel_add_product), CallbackQueryHandler(cancel_add_product, pattern="^cancel_add_product$")],
         allow_reentry=True,
@@ -202,22 +175,6 @@ def build_app():
             PROMO_PRODUCT_SELECT: [CallbackQueryHandler(promo_choose_product, pattern=r"^promo_product_\d+$")],
         },
         fallbacks=[CommandHandler("cancel", promo_cancel), CallbackQueryHandler(promo_cancel, pattern="^promo_cancel$")],
-        allow_reentry=True,
-    )
-
-    update_photos_handler = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^🖼 Оновити фото продукту$"), update_photos_start),
-            CallbackQueryHandler(update_photos_start, pattern="^admin_panel_update_photos$"),
-        ],
-        states={
-            UPDATE_PHOTOS_PRODUCT: [CallbackQueryHandler(update_photos_choose_product, pattern=r"^update_photos_product_\d+$")],
-            UPDATE_PHOTOS_UPLOAD: [
-                MessageHandler(filters.PHOTO, update_photos_add_photo),
-                CallbackQueryHandler(update_photos_finish, pattern="^update_photos_finish$"),
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", update_photos_cancel), CallbackQueryHandler(update_photos_cancel, pattern="^update_photos_cancel$")],
         allow_reentry=True,
     )
 
@@ -256,17 +213,10 @@ def build_app():
     app.add_handler(CommandHandler("clear_test_data", clear_test_data))
     app.add_handler(CommandHandler("regen_translations", regenerate_translations))
 
-    app.add_handler(MessageHandler(filters.Regex("^🛠 Адмін-панель$"), admin_panel))
     app.add_handler(MessageHandler(filters.Regex(r"^🏠 (Повернутися до головного меню|Вернуться в главное меню|Wróć do menu głównego|Back to main menu)$"), go_home))
     app.add_handler(CallbackQueryHandler(go_home_inline, pattern="^home_inline$"))
     app.add_handler(MessageHandler(filters.Regex(r"^🌐 (Мова|Язык|Język|Language|Мова / Язык / Język / Language)$"), language_menu))
     app.add_handler(CallbackQueryHandler(set_language, pattern=r"^lang_"))
-    app.add_handler(CallbackQueryHandler(my_orders_page, pattern=r"^my_orders_page_\d+$"))
-    app.add_handler(CallbackQueryHandler(my_order_detail, pattern=r"^my_order_\d+$"))
-    app.add_handler(CallbackQueryHandler(my_custom_order_detail, pattern=r"^my_custom_order_\d+$"))
-    app.add_handler(CallbackQueryHandler(show_user_cancel_order_info, pattern=r"^user_cancel_order_\d+$"))
-    app.add_handler(CallbackQueryHandler(show_user_cancel_contacts, pattern="^user_cancel_contacts$"))
-    app.add_handler(CallbackQueryHandler(close_user_cancel_info, pattern="^user_cancel_close$"))
     app.add_handler(CallbackQueryHandler(pickup_info, pattern=r"^pickup_(order|custom_order)_\d+$"))
 
     app.add_handler(MessageHandler(filters.Regex("^🗑️ Видалити продукт$"), delete_product))
@@ -276,11 +226,8 @@ def build_app():
     app.add_handler(checkout_handler)
     app.add_handler(cart_promo_handler)
     app.add_handler(promo_handler)
-    app.add_handler(update_photos_handler)
     app.add_handler(review_handler)
     app.add_handler(custom_order_handler)
-
-    app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern=r"^admin_panel_(active_orders|all_orders|delete_product|promos|reviews|regen_translations|clear_test_data)$"))
 
     app.add_handler(CallbackQueryHandler(catalog_back, pattern="^catalog_back$"))
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^catalog_category_"))

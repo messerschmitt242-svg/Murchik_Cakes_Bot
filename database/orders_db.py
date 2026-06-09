@@ -182,3 +182,51 @@ def format_items(raw_items: str) -> str:
             line += f"\n  промо: {item.get('promo_code')} (-{item.get('discount_percent', 0)}%)"
         result.append(line)
     return "\n".join(result)
+
+
+
+def _row_get(row, key: str, default=""):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            value = row[key]
+            return default if value is None else value
+        value = row[key]
+        return default if value is None else value
+    except Exception:
+        return default
+
+
+def format_order_meta(order) -> str:
+    """Compact order metadata block used in customer order history."""
+    status = _row_get(order, "status", "—")
+    created_at = _row_get(order, "created_at", "")
+    order_date = _row_get(order, "order_date", "")
+    delivery_method = _row_get(order, "delivery_method", "")
+    payment_method = _row_get(order, "payment_method", "")
+    comment = _row_get(order, "comment", "")
+    total = _row_get(order, "total", 0)
+
+    lines = [f"📊 Статус: {status}"]
+    if created_at:
+        lines.append(f"🕒 Створено: {created_at}")
+    if order_date:
+        lines.append(f"📅 На коли: {order_date}")
+    if delivery_method:
+        lines.append(f"🚚 Доставка: {delivery_method}")
+    if payment_method:
+        lines.append(f"💳 Оплата: {payment_method}")
+    if comment:
+        lines.append(f"💬 Коментар: {comment}")
+    try:
+        lines.append(f"💰 Сума: {float(total or 0):.2f} zł")
+    except Exception:
+        lines.append(f"💰 Сума: {total} zł")
+    return "\n".join(lines)
+
+
+def format_items_section(raw_items: str) -> str:
+    return format_items(raw_items)
+
+
+def can_cancel_order(status: str) -> bool:
+    return status not in FINAL_STATUSES
