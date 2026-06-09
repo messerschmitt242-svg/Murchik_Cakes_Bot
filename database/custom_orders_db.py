@@ -1,4 +1,4 @@
-from database.db import get_conn
+from database.db import get_conn, is_postgres
 
 CUSTOM_STATUSES = [
     "Прийнято",
@@ -21,16 +21,28 @@ def create_custom_order_db(
 ) -> int:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO custom_orders (
-            user_id, name, phone, product_id, product_name, description, date, photo, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
-    )
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO custom_orders (
+                user_id, name, phone, product_id, product_name, description, date, photo, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
+        )
+        order_id = int(cursor.fetchone()["id"])
+    else:
+        cursor.execute(
+            """
+            INSERT INTO custom_orders (
+                user_id, name, phone, product_id, product_name, description, date, photo, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
+        )
+        order_id = int(cursor.lastrowid)
     conn.commit()
-    order_id = cursor.lastrowid
     conn.close()
     return order_id
 
@@ -40,7 +52,7 @@ def get_active_custom_orders():
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, created_at
+        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, order_date, delivery_method, payment_method, comment, created_at
         FROM custom_orders
         WHERE status NOT IN ('Завершено', 'Скасовано')
         ORDER BY id DESC
@@ -56,7 +68,7 @@ def get_custom_order(order_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, created_at
+        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, order_date, delivery_method, payment_method, comment, created_at
         FROM custom_orders
         WHERE id = ?
         """,
@@ -102,7 +114,7 @@ def get_user_custom_orders(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, created_at
+        SELECT id, user_id, name, phone, product_id, product_name, description, date, photo, status, order_date, delivery_method, payment_method, comment, created_at
         FROM custom_orders
         WHERE user_id = ?
         ORDER BY id DESC

@@ -52,69 +52,105 @@ def _format_items_for_user(raw_items: str, user_id: int) -> str:
     return "\n".join(result)
 
 
+ORDERS_PAGE_SIZE = 5
+
+
+def _all_user_orders(user_id: int):
+    rows = []
+    for order in get_user_orders(user_id):
+        rows.append({"type": "regular", "id": order["id"], "status": order["status"], "created_at": str(order["created_at"]), "row": order})
+    for order in get_user_custom_orders(user_id):
+        rows.append({"type": "custom", "id": order["id"], "status": order["status"], "created_at": str(order["created_at"]), "row": order})
+    rows.sort(key=lambda x: (x.get("created_at") or "", int(x["id"])), reverse=True)
+    return rows
+
+
+def _orders_list_keyboard(user_id: int, page: int):
+    rows = _all_user_orders(user_id)
+    total = len(rows)
+    page = max(0, page)
+    start = page * ORDERS_PAGE_SIZE
+    chunk = rows[start:start + ORDERS_PAGE_SIZE]
+    keyboard = []
+    for item in chunk:
+        prefix = "#" if item["type"] == "regular" else "C#"
+        callback = f"my_order_{item['id']}" if item["type"] == "regular" else f"my_custom_order_{item['id']}"
+        keyboard.append([InlineKeyboardButton(f"{prefix}{item['id']} — {_status(user_id, item['status'])}", callback_data=callback)])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️", callback_data=f"my_orders_page_{page - 1}"))
+    if start + ORDERS_PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️", callback_data=f"my_orders_page_{page + 1}"))
+    if nav:
+        keyboard.append(nav)
+    return InlineKeyboardMarkup(keyboard) if keyboard else None, total
+
+
 async def my_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-
-    orders = get_user_orders(user_id)
-    custom_orders = get_user_custom_orders(user_id)
-
-    if not orders and not custom_orders:
+    keyboard, total = _orders_list_keyboard(user_id, 0)
+    if total == 0:
         await update.message.reply_text(tr(user_id, "orders_empty"))
         return
+    await update.message.reply_text(f"{tr(user_id, 'orders_title')}\nОберіть замовлення:", reply_markup=keyboard)
 
-    text = tr(user_id, "orders_title")
-    keyboard = []
 
-    for order in orders:
-        order_meta = format_order_meta(dict(order) | {"status": _status(user_id, order["status"])})
-        text += f"""
-{tr(user_id, "order_label")} #{order['id']}
+async def my_orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    page = int(query.data.split("_")[-1])
+    keyboard, total = _orders_list_keyboard(user_id, page)
+    if total == 0:
+        await query.message.edit_text(tr(user_id, "orders_empty"))
+        return
+    await query.message.edit_text(f"{tr(user_id, 'orders_title')}\nОберіть замовлення:", reply_markup=keyboard)
+
+
+async def my_order_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    order_id = int(query.data.split("_")[-1])
+    order = get_order(order_id)
+    if not order or int(order["user_id"]) != int(user_id):
+        await query.message.reply_text("Замовлення не знайдено.")
+        return
+    order_meta = format_order_meta(dict(order) | {"status": _status(user_id, order["status"])})
+    text = f"""{tr(user_id, "order_label")} #{order['id']}
 {order_meta}
 
 ────────────
-{_format_items_for_user(order['items'], user_id)}
-------------------
-"""
+{_format_items_for_user(order['items'], user_id)}"""
+    keyboard = []
+    if order["status"] == PICKUP_READY_STATUS:
+        keyboard.append([InlineKeyboardButton(f"{tr(user_id, 'pickup_button')} #{order['id']}", callback_data=f"pickup_order_{order['id']}")])
+    if can_cancel_order(order["status"]):
+        keyboard.append([InlineKeyboardButton(f"❌ Скасувати замовлення #{order['id']}", callback_data=f"user_cancel_order_{order['id']}")])
+    keyboard.append([InlineKeyboardButton("⬅️ До списку", callback_data="my_orders_page_0")])
+    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-        if order["status"] == PICKUP_READY_STATUS:
-            keyboard.append([
-                InlineKeyboardButton(
-                    f"{tr(user_id, 'pickup_button')} #{order['id']}",
-                    callback_data=f"pickup_order_{order['id']}"
-                )
-            ])
 
-        if can_cancel_order(order["status"]):
-            keyboard.append([
-                InlineKeyboardButton(
-                    f"❌ Скасувати замовлення #{order['id']}",
-                    callback_data=f"user_cancel_order_{order['id']}"
-                )
-            ])
-
-    for order in custom_orders:
-        text += f"""
-{tr(user_id, "custom_order_label")} C#{order['id']}
+async def my_custom_order_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    order_id = int(query.data.split("_")[-1])
+    order = next((o for o in get_user_custom_orders(user_id) if int(o["id"]) == order_id), None)
+    if not order:
+        await query.message.reply_text("Замовлення не знайдено.")
+        return
+    text = f"""{tr(user_id, "custom_order_label")} C#{order['id']}
 📊 {tr(user_id, "status_label")} {_status(user_id, order['status'])}
 🧁 {tr(user_id, "base_dessert_label")} {order['product_name'] or '—'}
 📅 {tr(user_id, "date_label")} {order['date']}
 
-{order['description']}
-------------------
-"""
-
-        if order["status"] == PICKUP_READY_STATUS:
-            keyboard.append([
-                InlineKeyboardButton(
-                    f"{tr(user_id, 'pickup_button')} C#{order['id']}",
-                    callback_data=f"pickup_custom_order_{order['id']}"
-                )
-            ])
-
-    await update.message.reply_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard) if keyboard else None,
-    )
+{order['description']}"""
+    keyboard = []
+    if order["status"] == PICKUP_READY_STATUS:
+        keyboard.append([InlineKeyboardButton(f"{tr(user_id, 'pickup_button')} C#{order['id']}", callback_data=f"pickup_custom_order_{order['id']}")])
+    keyboard.append([InlineKeyboardButton("⬅️ До списку", callback_data="my_orders_page_0")])
+    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def show_user_cancel_order_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
