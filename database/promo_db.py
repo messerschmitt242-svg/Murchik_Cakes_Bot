@@ -78,3 +78,16 @@ def get_all_promos():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def delete_promo(code: str) -> bool:
+    code = (code or "").strip().upper()
+    if not code:
+        return False
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM promo_codes WHERE code = ?", (code,))
+    changed = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed

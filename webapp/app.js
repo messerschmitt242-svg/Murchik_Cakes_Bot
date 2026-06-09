@@ -149,14 +149,35 @@ function validateOrderForm({ name, phone, date, deliveryMethod, paymentMethod })
   return "";
 }
 
-function uniqueCartPromo(cart = state.cart) {
-  const item = (cart.items || []).find(i => i.promo_code);
-  return item ? { code: item.promo_code, percent: Number(item.discount_percent || 0) } : null;
+function cartPromoSummary(cart = state.cart) {
+  const items = cart?.items || [];
+  const promos = new Map();
+
+  for (const item of items) {
+    if (!item.promo_code) continue;
+    const code = String(item.promo_code || "").trim();
+    if (!code) continue;
+    if (!promos.has(code)) {
+      promos.set(code, { code, percent: Number(item.discount_percent || 0), items: [] });
+    }
+    promos.get(code).items.push(item);
+  }
+
+  return Array.from(promos.values()).map(promo => {
+    const allItems = promo.items.length === items.length;
+    const itemNames = promo.items.map(i => i.display_name || i.name).filter(Boolean);
+    return {
+      ...promo,
+      label: allItems
+        ? `${promo.code}: -${promo.percent}% до всього замовлення`
+        : `${promo.code}: -${promo.percent}% для: ${itemNames.join(", ")}`,
+    };
+  });
 }
 
 function orderSummaryHtml({ name, phone, date, deliveryMethod, paymentMethod, comment }) {
   const cart = state.cart || { items: [], total: 0 };
-  const promo = uniqueCartPromo(cart);
+  const promoSummary = cartPromoSummary(cart);
   const itemsHtml = (cart.items || []).map(i => `
     <div class="summary-item">
       <span>${i.display_name || i.name} ×${i.qty}</span>
@@ -173,7 +194,7 @@ function orderSummaryHtml({ name, phone, date, deliveryMethod, paymentMethod, co
       <div class="summary-line order-spaced-line">📅 <span>На коли</span><b>${date}</b></div>
       <div class="summary-line">🚚 <span>${tr("deliveryMethod")}</span><b>${deliveryMethod}</b></div>
       <div class="summary-line">💳 <span>${tr("paymentMethod")}</span><b>${paymentMethod}</b></div>
-      ${promo ? `<div class="summary-line">🎟 <span>${tr("promo")}</span><b>${promo.code} −${promo.percent}%</b></div>` : ""}
+      ${promoSummary.length ? `<div class="summary-line">🎟 <span>${tr("promo")}</span><b>${promoSummary.map(p => p.label).join("; ")}</b></div>` : ""}
       ${Number(cart.total_discount || 0) > 0 ? `<div class="summary-line">💸 <span>Знижка</span><b>${Number(cart.total_discount).toFixed(2)} zł</b></div>` : ""}
       <div class="summary-total">💰 ${tr("total")}: ${Number(cart.total || 0).toFixed(2)} zł</div>
       ${comment ? `<div class="summary-line">💬 <span>${tr("comment")}</span><b>${comment}</b></div>` : ""}
@@ -549,13 +570,13 @@ function renderCart(data) {
     return;
   }
 
-  const promo = uniqueCartPromo(data);
+  const promoSummary = cartPromoSummary(data);
   const promoBlock = `
     <div class="cart-promo-block">
-      <input id="promo_order" placeholder="${tr("promo")}" style="padding:9px;margin:0" value="${promo?.code || ""}">
+      <input id="promo_order" placeholder="${tr("promo")}" style="padding:9px;margin:0" value="">
       <button class="secondary" onclick="applyPromo()">${tr("applyPromo")}</button>
     </div>
-    ${promo ? `<div class="muted">🎟 ${promo.code}: -${promo.percent}% до всього замовлення</div>` : ""}
+    ${promoSummary.length ? `<div class="muted">🎟 ${promoSummary.map(p => p.label).join("<br>🎟 ")}</div>` : ""}
   `;
 
   container.innerHTML = data.items.map(i => `

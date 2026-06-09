@@ -2,7 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
 from config import is_admin
-from database.promo_db import create_promo, get_all_promos
+from database.promo_db import create_promo, get_all_promos, delete_promo
 from database.products_db import get_all_products, get_product
 from handlers.cleanup import delete_callback_message
 
@@ -12,10 +12,36 @@ PROMO_SCOPE_SELECT = 302
 PROMO_PRODUCT_SELECT = 303
 
 
+def _row_get(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+
+def _format_promo_line(promo) -> str:
+    code = _row_get(promo, "code", "")
+    discount = _row_get(promo, "discount_percent", 0)
+    product_id = _row_get(promo, "product_id")
+    product_name = _row_get(promo, "product_name")
+    status = "активний" if _row_get(promo, "is_active", 1) else "вимкнений"
+    scope = "на всю корзину" if product_id is None else f"на товар: {product_name or ('#' + str(product_id))}"
+    return f"• {code} — -{discount}% — {scope} — {status}"
+
+
 def _start_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎁 Сгенерувати промокод", callback_data="promo_create")],
-    ])
+    keyboard = [[InlineKeyboardButton("➕ Створити промокод", callback_data="promo_create")]]
+    promos = get_all_promos()
+    for promo in promos:
+        code = str(_row_get(promo, "code", "")).strip().upper()
+        discount = _row_get(promo, "discount_percent", 0)
+        product_id = _row_get(promo, "product_id")
+        product_name = _row_get(promo, "product_name")
+        scope = "корзина" if product_id is None else (product_name or f"товар #{product_id}")
+        keyboard.append([
+            InlineKeyboardButton(f"🗑 {code} -{discount}% ({scope})", callback_data=f"promo_delete_{code}")
+        ])
+    return InlineKeyboardMarkup(keyboard)
 
 
 def _discount_keyboard():
@@ -47,10 +73,39 @@ def _products_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 
+def _promos_text() -> str:
+    promos = get_all_promos()
+    if not promos:
+        return "🎁 Промокоди\n\nПромокодів поки немає."
+    lines = ["🎁 Промокоди", ""]
+    lines.extend(_format_promo_line(promo) for promo in promos)
+    lines.append("")
+    lines.append("Щоб видалити промокод — натисніть кнопку з 🗑 нижче.")
+    return "\n".join(lines)
+
+
 async def promo_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         return
-    await update.message.reply_text("Панель промокодів:", reply_markup=_start_keyboard())
+    text = _promos_text()
+    markup = _start_keyboard()
+    if update.message:
+        await update.message.reply_text(text, reply_markup=markup)
+    elif update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        await query.edit_message_text(text, reply_markup=markup)
+
+
+async def promo_delete_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        return
+    code = query.data.replace("promo_delete_", "", 1).strip().upper()
+    ok = delete_promo(code)
+    text = (f"✅ Промокод {code} видалено.\n\n" if ok else f"⚠️ Промокод {code} не знайдено.\n\n") + _promos_text()
+    await query.edit_message_text(text, reply_markup=_start_keyboard())
 
 
 async def promo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -104,7 +159,7 @@ async def promo_choose_scope(update: Update, context: ContextTypes.DEFAULT_TYPE)
         create_promo(code, int(discount), product_id=None)
         context.user_data.pop("new_promo_code", None)
         context.user_data.pop("new_promo_discount", None)
-        await context.bot.send_message(chat_id=chat_id, text=f"✅ Промокод створено:\n{code} — -{discount}% — на всю корзину")
+        await context.bot.send_message(chat_id=chat_id, text=f"✅ Промокод створено:\n{code} — -{discount}% — на всю корзину", reply_markup=_start_keyboard())
         return ConversationHandler.END
 
     products = get_all_products()
@@ -134,7 +189,7 @@ async def promo_choose_product(update: Update, context: ContextTypes.DEFAULT_TYP
     create_promo(code, int(discount), product_id=product_id)
     context.user_data.pop("new_promo_code", None)
     context.user_data.pop("new_promo_discount", None)
-    await context.bot.send_message(chat_id=chat_id, text=f"✅ Промокод створено:\n{code} — -{discount}% — товар: {product['name']}")
+    await context.bot.send_message(chat_id=chat_id, text=f"✅ Промокод створено:\n{code} — -{discount}% — товар: {product['name']}", reply_markup=_start_keyboard())
     return ConversationHandler.END
 
 
@@ -153,15 +208,4 @@ async def promo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def promo_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
-    promos = get_all_promos()
-    if not promos:
-        await update.message.reply_text("Промокодів поки немає.")
-        return
-    text = "🎁 Промокоди:\n\n"
-    for promo in promos:
-        status = "активний" if promo["is_active"] else "вимкнений"
-        scope = "вся корзина" if promo["product_id"] is None else f"товар: {promo['product_name'] or promo['product_id']}"
-        text += f"• {promo['code']} — -{promo['discount_percent']}% — {scope} — {status}\n"
-    await update.message.reply_text(text)
+    await promo_menu(update, context)

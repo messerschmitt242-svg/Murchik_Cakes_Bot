@@ -52,6 +52,7 @@ from handlers.promo import (
     promo_choose_scope,
     promo_choose_product,
     promo_cancel,
+    promo_delete_callback,
     PROMO_CODE_INPUT,
     PROMO_DISCOUNT_SELECT,
     PROMO_SCOPE_SELECT,
@@ -203,6 +204,8 @@ def build_app():
         fallbacks=[CommandHandler("cancel", cart_promo_cancel)],
         allow_reentry=True,
     )
+
+    app.add_handler(CallbackQueryHandler(promo_delete_callback, pattern=r"^promo_delete_.+$"))
 
     promo_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(promo_start, pattern="^promo_create$")],
