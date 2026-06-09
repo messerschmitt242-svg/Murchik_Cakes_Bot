@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from config import BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_IDS
+from config import BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_IDS, WEBAPP_URL
 from database.db import init_db
 from database.products_db import get_all_products, get_product, get_categories
 from database.cart_db import (
@@ -38,7 +38,7 @@ from database.reviews_db import (
 from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
 from utils_dates import min_order_date_text, validate_order_date
-from services.calendar_links import google_calendar_order_url
+from services.calendar_links import calendar_order_url, build_order_ics
 
 app = FastAPI(title="Murchik Cakes API", version="3.6.1-hotfix")
 app.add_middleware(
@@ -395,14 +395,11 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
 {discount_text}
 ────────────
 {items_text}"""
-    calendar_url = google_calendar_order_url(
-        order_id, req.name.strip(), _normalize_phone(req.phone), items_text, total,
-        req.date, req.delivery_method, req.payment_method, req.comment.strip(),
-    )
+    calendar_url = calendar_order_url(order_id, WEBAPP_URL)
     reply_markup = {
         "inline_keyboard": [
             [{"text": "📋 Відкрити замовлення", "callback_data": f"admin_order_{order_id}"}],
-            [{"text": "📅 Додати в Google Calendar", "url": calendar_url}],
+            [{"text": "📅 Додати в календар", "url": calendar_url}],
         ]
     }
 
@@ -453,6 +450,27 @@ def create_order_api(req: OrderRequest):
     clear_cart_db(req.user_id)
     admin_notified = _notify_admins_new_order(order_id, req, items, total, before, discount)
     return {"id": order_id, "status": "Прийнято", "total": total, "admin_notified": admin_notified}
+
+
+@app.get("/api/orders/{order_id}/calendar.ics")
+def order_calendar_ics(order_id: int):
+    order = get_order(order_id)
+    if not order:
+        raise HTTPException(404, "Order not found")
+    items_text = format_items(order["items"])
+    ics = build_order_ics(
+        order_id=order["id"],
+        customer_name=order["name"],
+        phone=order["phone"],
+        items_text=items_text,
+        total=float(order["total"] or 0),
+        order_date=order["order_date"] if "order_date" in order.keys() else "",
+        delivery_method=order["delivery_method"] if "delivery_method" in order.keys() else "",
+        payment_method=order["payment_method"] if "payment_method" in order.keys() else "",
+        comment=order["comment"] if "comment" in order.keys() else "",
+    )
+    headers = {"Content-Disposition": f'attachment; filename="murchik-order-{order_id}.ics"'}
+    return Response(content=ics, media_type="text/calendar; charset=utf-8", headers=headers)
 
 
 @app.get("/api/orders/{user_id}")
