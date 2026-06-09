@@ -42,6 +42,8 @@ from handlers.admin_orders import (
     cancel_custom_order,
     delete_order,
     delete_custom_order,
+    add_order_to_tasks,
+    add_custom_order_to_tasks,
 )
 from handlers.delete_product import delete_product, delete_product_callback
 from handlers.promo import (
@@ -291,6 +293,8 @@ def build_app():
     app.add_handler(CallbackQueryHandler(advance_custom_order_status, pattern=r"^admin_next_custom_status_\d+$"))
     app.add_handler(CallbackQueryHandler(cancel_order, pattern=r"^admin_cancel_order_\d+$"))
     app.add_handler(CallbackQueryHandler(cancel_custom_order, pattern=r"^admin_cancel_custom_order_\d+$"))
+    app.add_handler(CallbackQueryHandler(add_order_to_tasks, pattern=r"^admin_add_tasks_order_\d+$"))
+    app.add_handler(CallbackQueryHandler(add_custom_order_to_tasks, pattern=r"^admin_add_tasks_custom_order_\d+$"))
     app.add_handler(CallbackQueryHandler(delete_order, pattern=r"^admin_delete_order_\d+$"))
     app.add_handler(CallbackQueryHandler(delete_custom_order, pattern=r"^admin_delete_custom_order_\d+$"))
 

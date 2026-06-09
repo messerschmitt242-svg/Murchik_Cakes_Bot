@@ -12,6 +12,8 @@ from database.user_settings_db import get_user_language
 
 def _status(user_id: int, status: str) -> str:
     mapping = {
+        "Створено": "status_created",
+        "Створений": "status_created",
         "Прийнято": "status_accepted",
         "Готується": "status_cooking",
         "Готове до видачі": "status_ready",

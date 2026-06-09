@@ -1,6 +1,7 @@
 from database.db import get_conn, is_postgres
 
 CUSTOM_STATUSES = [
+    "Створено",
     "Прийнято",
     "Готується",
     "Готове до видачі",
@@ -29,7 +30,7 @@ def create_custom_order_db(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
             """,
-            (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
+            (user_id, name, phone, product_id, product_name, description, date, photo, "Створено"),
         )
         order_id = int(cursor.fetchone()["id"])
     else:
@@ -39,7 +40,7 @@ def create_custom_order_db(
                 user_id, name, phone, product_id, product_name, description, date, photo, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, name, phone, product_id, product_name, description, date, photo, "Прийнято"),
+            (user_id, name, phone, product_id, product_name, description, date, photo, "Створено"),
         )
         order_id = int(cursor.lastrowid)
     conn.commit()
@@ -100,6 +101,8 @@ def delete_cancelled_custom_order(order_id: int) -> bool:
 
 
 def next_custom_status(current_status: str):
+    if current_status in ("Створено", "Створений"):
+        return "Прийнято", "✅ Прийняти замовлення"
     if current_status == "Прийнято":
         return "Готується", "👩‍🍳 Готується"
     if current_status == "Готується":

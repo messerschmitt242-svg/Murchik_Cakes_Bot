@@ -205,7 +205,7 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
 {items_text}
 
 Разом: {total:.2f} zł
-Статус: Прийнято
+Статус: Створено
 """
     google_task = create_google_task_for_order(
         order_id=order_id,

@@ -422,6 +422,18 @@ def _telegram_send_message(chat_id: int, text: str, reply_markup: dict | None = 
     return ok
 
 
+def _notify_customer_order_created(user_id: int, order_id: int) -> None:
+    if not BOT_TOKEN or not user_id:
+        return
+    try:
+        _telegram_send_message(
+            int(user_id),
+            f"🍰 Ваше замовлення №{order_id} створено та очікує підтвердження.",
+        )
+    except Exception as exc:
+        print(f"CUSTOMER CREATED NOTIFY ERROR order #{order_id}: {exc}")
+
+
 def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict], total: float, before: float, discount: float, google_task: dict | None = None) -> int:
     if not BOT_TOKEN:
         print("ADMIN NOTIFY WARNING: BOT_TOKEN is empty")
@@ -445,7 +457,7 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
 
 Ім'я: {req.name.strip()}
 Телефон: {_normalize_phone(req.phone)}
-Статус: Прийнято
+Статус: Створено
 Дата замовлення: {created_date}
 На коли: {req.date}
 Спосіб доставки: {req.delivery_method}
@@ -519,6 +531,7 @@ def create_order_api(req: OrderRequest):
         comment=req.comment,
     )
     clear_cart_db(req.user_id)
+    _notify_customer_order_created(req.user_id, order_id)
     items_text = _format_order_items_for_admin(items)
     google_task = create_google_task_for_order(
         order_id=order_id,
@@ -532,7 +545,7 @@ def create_order_api(req: OrderRequest):
         comment=req.comment.strip(),
     )
     admin_notified = _notify_admins_new_order(order_id, req, items, total, before, discount, google_task=google_task)
-    return {"id": order_id, "status": "Прийнято", "total": total, "admin_notified": admin_notified, "google_task_created": bool(google_task)}
+    return {"id": order_id, "status": "Створено", "total": total, "admin_notified": admin_notified, "google_task_created": bool(google_task)}
 
 
 @app.get("/api/orders/{order_id}/calendar.ics")
@@ -608,7 +621,8 @@ def create_custom_order_api(req: CustomOrderRequest):
         date=req.date,
         photo=req.photo,
     )
-    return {"id": order_id, "status": "Прийнято"}
+    _notify_customer_order_created(req.user_id, order_id)
+    return {"id": order_id, "status": "Створено"}
 
 
 @app.get("/api/favorites/{user_id}")

@@ -2,6 +2,7 @@ import json
 from database.db import get_conn, is_postgres
 
 STATUSES = [
+    "Створено",
     "Прийнято",
     "Готується",
     "Готове до видачі",
@@ -35,7 +36,7 @@ def create_order(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
             """,
-            (user_id, name, phone, payload, total, "Прийнято", order_date, delivery_method, payment_method, comment),
+            (user_id, name, phone, payload, total, "Створено", order_date, delivery_method, payment_method, comment),
         )
         order_id = int(cursor.fetchone()["id"])
     else:
@@ -47,7 +48,7 @@ def create_order(
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, name, phone, payload, total, "Прийнято", order_date, delivery_method, payment_method, comment),
+            (user_id, name, phone, payload, total, "Створено", order_date, delivery_method, payment_method, comment),
         )
         order_id = int(cursor.lastrowid)
     conn.commit()
@@ -156,6 +157,8 @@ def delete_cancelled_order(order_id: int) -> bool:
 
 
 def next_status(current_status: str):
+    if current_status in ("Створено", "Створений"):
+        return "Прийнято", "✅ Прийняти замовлення"
     if current_status == "Прийнято":
         return "Готується", "👨‍🍳 Готується"
     if current_status == "Готується":

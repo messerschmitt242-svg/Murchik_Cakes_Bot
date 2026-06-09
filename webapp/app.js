@@ -189,7 +189,7 @@ function orderSummaryHtml({ name, phone, date, deliveryMethod, paymentMethod, co
   return `
     <div class="order-confirm-card">
       <h2>📦 ${tr("orders")}</h2>
-      <div class="summary-line">📊 <span>${tr("status")}</span><b>Прийнято</b></div>
+      <div class="summary-line">📊 <span>${tr("status")}</span><b>Створено</b></div>
       <div class="summary-line">📅 <span>Дата замовлення</span><b>${today}</b></div>
       <div class="summary-line order-spaced-line">📅 <span>На коли</span><b>${date}</b></div>
       <div class="summary-line">🚚 <span>${tr("deliveryMethod")}</span><b>${deliveryMethod}</b></div>
@@ -782,7 +782,7 @@ function isCompletedOrder(status) {
 }
 
 function canRequestOrderCancel(status) {
-  return ["Прийнято", "Accepted", "accepted"].includes(status);
+  return ["Створено", "Створений", "Прийнято", "Created", "Accepted", "created", "accepted"].includes(status);
 }
 
 let orderReviewState = null;

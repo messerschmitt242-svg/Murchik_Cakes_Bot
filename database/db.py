@@ -145,7 +145,7 @@ def init_db():
                 phone TEXT NOT NULL,
                 items TEXT NOT NULL,
                 total REAL DEFAULT 0,
-                status TEXT DEFAULT 'Прийнято',
+                status TEXT DEFAULT 'Створено',
                 order_date TEXT DEFAULT '',
                 delivery_method TEXT DEFAULT '',
                 payment_method TEXT DEFAULT '',
@@ -194,7 +194,7 @@ def init_db():
                 description TEXT NOT NULL,
                 date TEXT DEFAULT '',
                 photo TEXT DEFAULT '',
-                status TEXT DEFAULT 'Прийнято',
+                status TEXT DEFAULT 'Створено',
                 order_date TEXT DEFAULT '',
                 delivery_method TEXT DEFAULT '',
                 payment_method TEXT DEFAULT '',
@@ -240,7 +240,7 @@ def init_db():
                 phone TEXT NOT NULL,
                 items TEXT NOT NULL,
                 total REAL DEFAULT 0,
-                status TEXT DEFAULT 'Прийнято',
+                status TEXT DEFAULT 'Створено',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -284,7 +284,7 @@ def init_db():
                 description TEXT NOT NULL,
                 date TEXT DEFAULT '',
                 photo TEXT DEFAULT '',
-                status TEXT DEFAULT 'Прийнято',
+                status TEXT DEFAULT 'Створено',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -322,6 +322,10 @@ def init_db():
     _ensure_column(cursor, "custom_orders", "delivery_method", "TEXT DEFAULT ''")
     _ensure_column(cursor, "custom_orders", "payment_method", "TEXT DEFAULT ''")
     _ensure_column(cursor, "custom_orders", "comment", "TEXT DEFAULT ''")
+
+    # Normalize old grammatically incorrect status values.
+    cursor.execute("UPDATE orders SET status = ? WHERE status = ?", ("Створено", "Створений"))
+    cursor.execute("UPDATE custom_orders SET status = ? WHERE status = ?", ("Створено", "Створений"))
 
     conn.commit()
     conn.close()
