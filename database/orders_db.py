@@ -1,5 +1,5 @@
 import json
-from database.db import get_conn
+from database.db import get_conn, is_postgres
 
 STATUSES = [
     "Прийнято",
@@ -11,18 +11,46 @@ STATUSES = [
 FINAL_STATUSES = ("Завершено", "Скасовано")
 
 
-def create_order(user_id: int, name: str, phone: str, items: list[dict], total: float) -> int:
+def create_order(
+    user_id: int,
+    name: str,
+    phone: str,
+    items: list[dict],
+    total: float,
+    order_date: str = "",
+    delivery_method: str = "",
+    payment_method: str = "",
+    comment: str = "",
+) -> int:
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO orders (user_id, name, phone, items, total, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (user_id, name, phone, json.dumps(items, ensure_ascii=False), total, "Прийнято"),
-    )
+    payload = json.dumps(items, ensure_ascii=False)
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO orders (
+                user_id, name, phone, items, total, status,
+                order_date, delivery_method, payment_method, comment
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            (user_id, name, phone, payload, total, "Прийнято", order_date, delivery_method, payment_method, comment),
+        )
+        order_id = int(cursor.fetchone()["id"])
+    else:
+        cursor.execute(
+            """
+            INSERT INTO orders (
+                user_id, name, phone, items, total, status,
+                order_date, delivery_method, payment_method, comment
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, name, phone, payload, total, "Прийнято", order_date, delivery_method, payment_method, comment),
+        )
+        order_id = int(cursor.lastrowid)
     conn.commit()
-    order_id = cursor.lastrowid
     conn.close()
     return order_id
 
@@ -32,7 +60,8 @@ def get_user_orders(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status,
+               order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         WHERE user_id = ?
         ORDER BY id DESC
@@ -48,7 +77,8 @@ def get_all_orders(limit: int | None = None, offset: int = 0):
     conn = get_conn()
     cursor = conn.cursor()
     sql = """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status,
+               order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         ORDER BY id DESC
     """
@@ -76,7 +106,8 @@ def get_active_orders():
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status,
+               order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         WHERE status NOT IN ('Завершено', 'Скасовано')
         ORDER BY id DESC
@@ -92,7 +123,8 @@ def get_order(order_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, user_id, name, phone, items, total, status, created_at
+        SELECT id, user_id, name, phone, items, total, status,
+               order_date, delivery_method, payment_method, comment, created_at
         FROM orders
         WHERE id = ?
         """,
@@ -125,7 +157,7 @@ def delete_cancelled_order(order_id: int) -> bool:
 
 def next_status(current_status: str):
     if current_status == "Прийнято":
-        return "Готується", "👩‍🍳 Готується"
+        return "Готується", "👨‍🍳 Готується"
     if current_status == "Готується":
         return "Готове до видачі", "✅ Готове до видачі"
     if current_status == "Готове до видачі":
@@ -142,7 +174,10 @@ def format_items(raw_items: str) -> str:
         return "—"
     result = []
     for item in items:
-        line = f"• {item.get('name', 'Товар')} x{item.get('qty', 1)} — {item.get('final_subtotal', item.get('subtotal', 0)):.2f} zł"
+        line = (
+            f"• {item.get('name', 'Товар')} x{item.get('qty', 1)} — "
+            f"{float(item.get('final_subtotal', item.get('subtotal', 0)) or 0):.2f} zł"
+        )
         if item.get("promo_code"):
             line += f"\n  промо: {item.get('promo_code')} (-{item.get('discount_percent', 0)}%)"
         result.append(line)

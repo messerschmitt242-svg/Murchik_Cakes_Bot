@@ -1,18 +1,28 @@
-from database.db import get_conn
+from database.db import get_conn, is_postgres
 from database.promo_db import get_promo
 
 
 def add_to_cart_db(user_id: int, product_id: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO cart (user_id, product_id, qty)
-        VALUES (?, ?, 1)
-        ON CONFLICT(user_id, product_id) DO UPDATE SET qty = qty + 1
-        """,
-        (user_id, product_id),
-    )
+    if is_postgres():
+        cursor.execute(
+            """
+            INSERT INTO cart (user_id, product_id, qty)
+            VALUES (?, ?, 1)
+            ON CONFLICT(user_id, product_id) DO UPDATE SET qty = cart.qty + 1
+            """,
+            (user_id, product_id),
+        )
+    else:
+        cursor.execute(
+            """
+            INSERT INTO cart (user_id, product_id, qty)
+            VALUES (?, ?, 1)
+            ON CONFLICT(user_id, product_id) DO UPDATE SET qty = qty + 1
+            """,
+            (user_id, product_id),
+        )
     conn.commit()
     conn.close()
 
@@ -21,17 +31,11 @@ def change_cart_qty_db(user_id: int, product_id: int, delta: int):
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute(
-        """
-        UPDATE cart SET qty = qty + ?
-        WHERE user_id = ? AND product_id = ?
-        """,
+        "UPDATE cart SET qty = qty + ? WHERE user_id = ? AND product_id = ?",
         (delta, user_id, product_id),
     )
     cursor.execute(
-        """
-        DELETE FROM cart
-        WHERE user_id = ? AND product_id = ? AND qty <= 0
-        """,
+        "DELETE FROM cart WHERE user_id = ? AND product_id = ? AND qty <= 0",
         (user_id, product_id),
     )
     conn.commit()
@@ -58,10 +62,8 @@ def apply_promo_to_cart_item(user_id: int, product_id: int, code: str):
     promo = get_promo(code, product_id=product_id)
     if not promo:
         return False, None
-
     normalized_code = promo["code"]
     discount = int(promo["discount_percent"])
-
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute(
@@ -93,7 +95,6 @@ def apply_promo_to_cart(user_id: int, code: str):
         if ok:
             applied += 1
             last_discount = discount
-
     return applied > 0, applied, last_discount
 
 
@@ -102,7 +103,8 @@ def get_cart_items_db(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT c.product_id, c.qty, c.promo_code, c.discount_percent, p.name, p.price
+        SELECT c.product_id, c.qty, c.promo_code, c.discount_percent,
+               p.name, p.price
         FROM cart c
         JOIN products p ON p.id = c.product_id
         WHERE c.user_id = ?
@@ -117,7 +119,6 @@ def get_cart_items_db(user_id: int):
     total_before_discount = 0.0
     total_discount = 0.0
     total = 0.0
-
     for row in rows:
         price = float(row["price"] or 0)
         qty = int(row["qty"] or 0)
@@ -141,5 +142,4 @@ def get_cart_items_db(user_id: int):
                 "final_subtotal": final_subtotal,
             }
         )
-
     return items, total, total_before_discount, total_discount

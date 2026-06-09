@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import http.client
 import json
@@ -11,9 +10,10 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import Response, RedirectResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 
+from config import BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_IDS
 from database.db import init_db
 from database.products_db import get_all_products, get_product, get_categories
 from database.cart_db import (
@@ -22,20 +22,25 @@ from database.cart_db import (
     change_cart_qty_db,
     remove_from_cart_db,
     clear_cart_db,
+    apply_promo_to_cart,
     apply_promo_to_cart_item,
 )
-from database.orders_db import create_order, get_user_orders, get_order
+from database.orders_db import create_order, get_user_orders, get_order, format_items
 from database.custom_orders_db import create_custom_order_db, get_user_custom_orders
 from database.favorites_db import toggle_favorite_db, get_favorites_db, is_favorite_db
-from database.reviews_db import add_review_db, get_product_reviews_db, get_product_rating_db, get_reviews_db, get_bakery_reviews_db
+from database.reviews_db import (
+    add_review_db,
+    get_product_reviews_db,
+    get_product_rating_db,
+    get_reviews_db,
+    get_bakery_reviews_db,
+)
 from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
-from database.orders_db import format_items
-from config import BOT_TOKEN, ADMIN_IDS
 from utils_dates import min_order_date_text, validate_order_date
+from services.calendar_links import google_calendar_order_url
 
-app = FastAPI(title="Murchik Cakes API", version="3.5.0")
-
+app = FastAPI(title="Murchik Cakes API", version="3.6.1-hotfix")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,14 +51,9 @@ app.add_middleware(
 
 ROOT = Path(__file__).resolve().parent.parent
 WEBAPP_DIR = ROOT / "webapp"
-
-# In-memory Telegram photo cache.
-# It avoids repeating Telegram getFile/download calls when Mini App rerenders,
-# especially after language switching.
 TELEGRAM_FILE_PATH_CACHE = {}
 TELEGRAM_IMAGE_CACHE = {}
 TELEGRAM_CACHE_TTL_SECONDS = 60 * 60 * 12
-
 
 
 class CartAddRequest(BaseModel):
@@ -69,7 +69,7 @@ class CartQtyRequest(BaseModel):
 
 class CartPromoRequest(BaseModel):
     user_id: int
-    product_id: int
+    product_id: Optional[int] = None
     code: str
 
 
@@ -117,10 +117,7 @@ def startup():
 
 def _rating(product_id: int):
     avg, count = get_product_rating_db(product_id)
-    return {
-        "average": avg,
-        "count": count,
-    }
+    return {"average": avg, "count": count}
 
 
 def _miniapp_image_url(src: str) -> str:
@@ -130,13 +127,12 @@ def _miniapp_image_url(src: str) -> str:
         return src
     return f"/api/telegram-photo?file_id={quote(src)}"
 
+
 def _localized_product(product: dict, user_id: int):
     if not product:
         return None
-
     photos = product.get("photos") or []
     label_image = product.get("label_image") or ""
-
     return {
         **product,
         "label_image_url": _miniapp_image_url(label_image),
@@ -149,24 +145,20 @@ def _localized_product(product: dict, user_id: int):
 
 
 def _localized_order_items(raw_items: str, user_id: int):
-    # This is simple and safe: keep original order data, but adapt first word if possible.
-    import json
     try:
         items = json.loads(raw_items or "[]")
     except Exception:
         return []
-
     lang = get_user_language(user_id)
     result = []
     for item in items:
-        name = item.get("name", "Товар")
         item = dict(item)
-        item["display_name"] = translate_product_name_raw(name, lang)
+        item["display_name"] = translate_product_name_raw(item.get("name", "Товар"), lang)
         result.append(item)
     return result
 
+
 def _order_contains_product(order, product_id: int) -> bool:
-    import json
     try:
         items = json.loads(order["items"] or "[]")
     except Exception:
@@ -180,7 +172,7 @@ def _completed_status(status: str) -> bool:
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "version": "3.5.0", "telegram_photo_proxy": bool(BOT_TOKEN)}
+    return {"ok": True, "version": "3.6.1-hotfix", "telegram_photo_proxy": bool(BOT_TOKEN)}
 
 
 @app.get("/api/order-rules")
@@ -213,10 +205,6 @@ def products(user_id: int = Query(0), category: Optional[str] = None, q: str = "
             if q_lower in (p.get("display_name") or p.get("name") or "").lower()
             or q_lower in (p.get("display_description") or p.get("description") or "").lower()
         ]
-
-    # System sorting: desserts are always shown alphabetically by displayed name.
-    # Python compares the whole string, so if the first letter matches it naturally
-    # continues with the second, third, etc.
     data.sort(key=lambda p: (p.get("display_name") or p.get("name") or "").casefold())
     return data
 
@@ -231,30 +219,16 @@ def product(product_id: int, user_id: int = Query(0)):
 
 @app.get("/api/telegram-photo")
 def telegram_photo(file_id: str):
-    """
-    Telegram file_id is not a public image URL.
-    This endpoint converts Telegram file_id into a browser-readable image response for Mini App.
-
-    Optimized:
-    - file_id -> file_path is cached in memory
-    - downloaded image bytes are cached in memory
-    - browser receives long Cache-Control headers
-    """
     if not BOT_TOKEN:
         raise HTTPException(500, "BOT_TOKEN is not configured")
-
     now = time.time()
     cached_image = TELEGRAM_IMAGE_CACHE.get(file_id)
     if cached_image and now - cached_image["time"] < TELEGRAM_CACHE_TTL_SECONDS:
         return Response(
             content=cached_image["content"],
             media_type=cached_image["content_type"],
-            headers={
-                "Cache-Control": "public, max-age=604800, immutable",
-                "X-Murchik-Cache": "image-hit",
-            },
+            headers={"Cache-Control": "public, max-age=604800, immutable", "X-Murchik-Cache": "image-hit"},
         )
-
     try:
         cached_path = TELEGRAM_FILE_PATH_CACHE.get(file_id)
         if cached_path and now - cached_path["time"] < TELEGRAM_CACHE_TTL_SECONDS:
@@ -265,16 +239,11 @@ def telegram_photo(file_id: str):
             resp = conn.getresponse()
             payload = resp.read()
             conn.close()
-
             data = json.loads(payload.decode("utf-8"))
             if not data.get("ok"):
                 raise HTTPException(404, "Telegram file not found")
-
             file_path = data["result"]["file_path"]
-            TELEGRAM_FILE_PATH_CACHE[file_id] = {
-                "file_path": file_path,
-                "time": now,
-            }
+            TELEGRAM_FILE_PATH_CACHE[file_id] = {"file_path": file_path, "time": now}
 
         file_conn = http.client.HTTPSConnection("api.telegram.org", timeout=30)
         file_conn.request("GET", f"/file/bot{BOT_TOKEN}/{file_path}")
@@ -282,20 +251,11 @@ def telegram_photo(file_id: str):
         content = file_resp.read()
         content_type = file_resp.getheader("Content-Type") or "image/jpeg"
         file_conn.close()
-
-        TELEGRAM_IMAGE_CACHE[file_id] = {
-            "content": content,
-            "content_type": content_type,
-            "time": now,
-        }
-
+        TELEGRAM_IMAGE_CACHE[file_id] = {"content": content, "content_type": content_type, "time": now}
         return Response(
             content=content,
             media_type=content_type,
-            headers={
-                "Cache-Control": "public, max-age=604800, immutable",
-                "X-Murchik-Cache": "miss",
-            },
+            headers={"Cache-Control": "public, max-age=604800, immutable", "X-Murchik-Cache": "miss"},
         )
     except HTTPException:
         raise
@@ -309,12 +269,7 @@ def cart(user_id: int):
     lang = get_user_language(user_id)
     for item in items:
         item["display_name"] = translate_product_name_raw(item.get("name", "Товар"), lang)
-    return {
-        "items": items,
-        "total": total,
-        "total_before_discount": before,
-        "total_discount": discount,
-    }
+    return {"items": items, "total": total, "total_before_discount": before, "total_discount": discount}
 
 
 @app.post("/api/cart/add")
@@ -339,101 +294,127 @@ def cart_delete(user_id: int, product_id: int):
 
 @app.post("/api/cart/promo")
 def cart_promo(req: CartPromoRequest):
-    success, discount = apply_promo_to_cart_item(req.user_id, req.product_id, req.code)
-    return {
-        "success": success,
-        "discount": discount,
-        "cart": cart(req.user_id),
-    }
+    if req.product_id:
+        success, discount = apply_promo_to_cart_item(req.user_id, req.product_id, req.code)
+        applied = 1 if success else 0
+    else:
+        success, applied, discount = apply_promo_to_cart(req.user_id, req.code)
+    return {"success": success, "discount": discount, "applied": applied, "cart": cart(req.user_id)}
 
 
 def _normalize_phone(phone: str) -> str:
     return re.sub(r"\D", "", phone or "")
 
 
-def _validate_customer_payload(name: str, phone: str, delivery_method: str = "", payment_method: str = ""):
+def _validate_customer_payload(name: str, phone: str, delivery_method: str | None = "", payment_method: str | None = ""):
     if not (name or "").strip():
         raise HTTPException(400, "Name is required")
-
     normalized_phone = _normalize_phone(phone)
     if len(normalized_phone) != 9:
         raise HTTPException(400, "Phone must contain exactly 9 digits, for example 504 123 456")
-
     if delivery_method is not None and not str(delivery_method).strip():
         raise HTTPException(400, "Choose delivery method")
     if payment_method is not None and not str(payment_method).strip():
         raise HTTPException(400, "Choose payment method")
-
     return normalized_phone
 
 
 def _format_order_items_for_admin(items: list[dict]) -> str:
     lines = []
     for item in items:
-        lines.append(
+        line = (
             f"• {item.get('name', 'Товар')} ×{item.get('qty', 1)} — "
             f"{float(item.get('final_subtotal', item.get('subtotal', 0)) or 0):.2f} zł"
         )
+        if item.get("promo_code"):
+            line += f" ({item.get('promo_code')} -{item.get('discount_percent', 0)}%)"
+        lines.append(line)
     return "\n".join(lines) or "—"
 
 
+def _admin_targets() -> list[int]:
+    seen = set()
+    result = []
+    for chat_id in [*(ADMIN_IDS or []), *(ADMIN_CHAT_IDS or [])]:
+        if chat_id not in seen:
+            seen.add(chat_id)
+            result.append(chat_id)
+    return result
+
+
+def _telegram_send_message(chat_id: int, text: str, reply_markup: dict | None = None) -> bool:
+    body = {"chat_id": chat_id, "text": text}
+    if reply_markup:
+        body["reply_markup"] = reply_markup
+    conn = http.client.HTTPSConnection("api.telegram.org", timeout=12)
+    conn.request(
+        "POST",
+        f"/bot{BOT_TOKEN}/sendMessage",
+        body=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    resp = conn.getresponse()
+    response_body = resp.read().decode("utf-8", errors="replace")
+    ok = 200 <= resp.status < 300
+    if not ok:
+        print(f"ADMIN NOTIFY ERROR {chat_id}: HTTP {resp.status} {response_body}")
+    conn.close()
+    return ok
+
+
 def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict], total: float, before: float, discount: float) -> int:
-    if not BOT_TOKEN or not ADMIN_IDS:
+    if not BOT_TOKEN:
+        print("ADMIN NOTIFY WARNING: BOT_TOKEN is empty")
+        return 0
+    targets = _admin_targets()
+    if not targets:
+        print("ADMIN NOTIFY WARNING: ADMIN_IDS/ADMIN_CHAT_IDS are empty")
         return 0
 
-    promo_code = ""
-    discount_percent = 0
+    promo_parts = []
     for item in items:
         if item.get("promo_code"):
-            promo_code = item.get("promo_code") or ""
-            discount_percent = int(item.get("discount_percent") or 0)
-            break
-
+            promo_parts.append(f"{item.get('name')} — {item.get('promo_code')} (-{item.get('discount_percent', 0)}%)")
     discount_text = ""
-    if promo_code and discount > 0:
-        discount_text = f"\n🎟 Промокод: {promo_code} (-{discount_percent}%)\n💸 Знижка: {discount:.2f} zł\n💵 До знижки: {before:.2f} zł"
+    if discount > 0:
+        discount_text = f"\n🎁 Промокоди:\n" + "\n".join(promo_parts) + f"\n💸 Знижка: {discount:.2f} zł\nДо знижки: {before:.2f} zł"
 
+    items_text = _format_order_items_for_admin(items)
     created_date = datetime.utcnow().date().isoformat()
-    text = f"""🎂 Нове замовлення #{order_id}
+    text = f"""🧁 Нове замовлення #{order_id}
 
-👤 Ім'я: {req.name.strip()}
-📞 Телефон: {_normalize_phone(req.phone)}
-📊 Статус: Прийнято
-📅 Дата замовлення: {created_date}
-
-📅 На коли: {req.date}
-🚚 Спосіб доставки: {req.delivery_method}
-💳 Оплата: {req.payment_method}
-💰 Разом: {total:.2f} zł
-💬 Коментар: {req.comment.strip() or '—'}
-
+Ім'я: {req.name.strip()}
+Телефон: {_normalize_phone(req.phone)}
+Статус: Прийнято
+Дата замовлення: {created_date}
+На коли: {req.date}
+Спосіб доставки: {req.delivery_method}
+Оплата: {req.payment_method}
+Разом: {total:.2f} zł
+Коментар: {req.comment.strip() or '—'}
+{discount_text}
 ────────────
-{_format_order_items_for_admin(items)}
-{discount_text}"""
+{items_text}"""
+    calendar_url = google_calendar_order_url(
+        order_id, req.name.strip(), _normalize_phone(req.phone), items_text, total,
+        req.date, req.delivery_method, req.payment_method, req.comment.strip(),
+    )
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "📋 Відкрити замовлення", "callback_data": f"admin_order_{order_id}"}],
+            [{"text": "📅 Додати в Google Calendar", "url": calendar_url}],
+        ]
+    }
 
     success = 0
-    for admin_id in ADMIN_IDS:
+    for chat_id in targets:
         try:
-            conn = http.client.HTTPSConnection("api.telegram.org", timeout=12)
-            body = json.dumps({"chat_id": admin_id, "text": text}, ensure_ascii=False).encode("utf-8")
-            conn.request(
-                "POST",
-                f"/bot{BOT_TOKEN}/sendMessage",
-                body=body,
-                headers={"Content-Type": "application/json"},
-            )
-            resp = conn.getresponse()
-            response_body = resp.read().decode("utf-8", errors="replace")
-            status = resp.status
-            conn.close()
-            if 200 <= status < 300:
+            if _telegram_send_message(chat_id, text, reply_markup=reply_markup):
                 success += 1
-            else:
-                print(f"ADMIN NOTIFY ERROR {admin_id}: HTTP {status} {response_body}")
         except Exception as exc:
-            print(f"ADMIN NOTIFY ERROR {admin_id}: {exc}")
+            print(f"ADMIN NOTIFY ERROR {chat_id}: {exc}")
     if success == 0:
-        print("ADMIN NOTIFY WARNING: no admin received the order notification. Check ADMIN_IDS and make sure each admin has opened the bot at least once.")
+        print("ADMIN NOTIFY WARNING: no admin received the order notification. Check ADMIN_IDS/ADMIN_CHAT_IDS and make sure admin opened the bot.")
     return success
 
 
@@ -442,16 +423,17 @@ def create_order_api(req: OrderRequest):
     ok, message, _ = validate_order_date(req.date, required=True)
     if not ok:
         raise HTTPException(400, message)
-
     normalized_phone = _validate_customer_payload(req.name, req.phone, req.delivery_method, req.payment_method)
-
     items, total, before, discount = get_cart_items_db(req.user_id)
     if not items:
         raise HTTPException(400, "Cart is empty")
-
-    allowed_delivery = {"Самовивіз", "Кур'єр Glovo (дорого)", "Самовывоз", "Курьер Glovo (дорого)", "Odbiór osobisty", "Kurier Glovo (drogo)", "Pickup", "Glovo courier (expensive)"}
+    allowed_delivery = {
+        "Самовивіз", "Кур'єр Glovo (дорого)",
+        "Самовывоз", "Курьер Glovo (дорого)",
+        "Odbiór osobisty", "Kurier Glovo (drogo)",
+        "Pickup", "Glovo courier (expensive)",
+    }
     allowed_payment = {"Готівкою", "Переказ BLIK", "Наличкой", "Перевод BLIK", "Gotówką", "Przelew BLIK", "Cash", "BLIK transfer"}
-
     if req.delivery_method not in allowed_delivery:
         raise HTTPException(400, "Choose delivery method")
     if req.payment_method not in allowed_payment:
@@ -470,12 +452,7 @@ def create_order_api(req: OrderRequest):
     )
     clear_cart_db(req.user_id)
     admin_notified = _notify_admins_new_order(order_id, req, items, total, before, discount)
-    return {
-        "id": order_id,
-        "status": "Прийнято",
-        "total": total,
-        "admin_notified": admin_notified,
-    }
+    return {"id": order_id, "status": "Прийнято", "total": total, "admin_notified": admin_notified}
 
 
 @app.get("/api/orders/{user_id}")
@@ -489,14 +466,13 @@ def orders(user_id: int):
             "items": _localized_order_items(o["items"], user_id),
             "total": float(o["total"] or 0),
             "status": o["status"],
-            "order_date": o["order_date"],
-            "delivery_method": o["delivery_method"],
-            "payment_method": o["payment_method"],
-            "comment": o["comment"],
+            "order_date": o["order_date"] if "order_date" in o.keys() else "",
+            "delivery_method": o["delivery_method"] if "delivery_method" in o.keys() else "",
+            "payment_method": o["payment_method"] if "payment_method" in o.keys() else "",
+            "comment": o["comment"] if "comment" in o.keys() else "",
             "created_at": str(o["created_at"]),
             "type": "regular",
         })
-
     custom = []
     for o in get_user_custom_orders(user_id):
         custom.append({
@@ -505,18 +481,14 @@ def orders(user_id: int):
             "description": o["description"],
             "date": o["date"],
             "status": o["status"],
-            "order_date": o["order_date"],
-            "delivery_method": o["delivery_method"],
-            "payment_method": o["payment_method"],
-            "comment": o["comment"],
+            "order_date": o["order_date"] if "order_date" in o.keys() else o["date"],
+            "delivery_method": o["delivery_method"] if "delivery_method" in o.keys() else "",
+            "payment_method": o["payment_method"] if "payment_method" in o.keys() else "",
+            "comment": o["comment"] if "comment" in o.keys() else "",
             "created_at": str(o["created_at"]),
             "type": "custom",
         })
-
-    return {
-        "orders": regular,
-        "custom_orders": custom,
-    }
+    return {"orders": regular, "custom_orders": custom}
 
 
 @app.post("/api/custom-orders")
@@ -524,9 +496,7 @@ def create_custom_order_api(req: CustomOrderRequest):
     ok, message, _ = validate_order_date(req.date, required=True)
     if not ok:
         raise HTTPException(400, message)
-
     normalized_phone = _validate_customer_payload(req.name, req.phone, None, None)
-
     order_id = create_custom_order_db(
         user_id=req.user_id,
         name=req.name.strip(),
@@ -568,11 +538,9 @@ def product_reviews(product_id: int, limit: int = 5):
 def create_review(req: ReviewRequest):
     if req.rating < 1 or req.rating > 5:
         raise HTTPException(400, "Rating must be 1..5")
-
     if req.review_type == "product":
         if not req.order_id or not req.product_id:
             raise HTTPException(400, "Product review requires order_id and product_id")
-
         order = get_order(req.order_id)
         if not order:
             raise HTTPException(404, "Order not found")
@@ -582,7 +550,6 @@ def create_review(req: ReviewRequest):
             raise HTTPException(403, "Reviews are available only after order completion")
         if not _order_contains_product(order, req.product_id):
             raise HTTPException(400, "This product is not in the selected order")
-
     review_id = add_review_db(
         user_id=req.user_id,
         name=req.name,
@@ -604,20 +571,6 @@ def language(user_id: int):
 def update_language(req: LanguageRequest):
     set_user_language(req.user_id, req.language)
     return {"language": req.language}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if WEBAPP_DIR.exists():
