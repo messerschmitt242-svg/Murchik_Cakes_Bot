@@ -9,8 +9,7 @@ def add_to_cart_db(user_id: int, product_id: int):
         """
         INSERT INTO cart (user_id, product_id, qty)
         VALUES (?, ?, 1)
-        ON CONFLICT(user_id, product_id)
-        DO UPDATE SET qty = qty + 1
+        ON CONFLICT(user_id, product_id) DO UPDATE SET qty = qty + 1
         """,
         (user_id, product_id),
     )
@@ -23,8 +22,7 @@ def change_cart_qty_db(user_id: int, product_id: int, delta: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        UPDATE cart
-        SET qty = qty + ?
+        UPDATE cart SET qty = qty + ?
         WHERE user_id = ? AND product_id = ?
         """,
         (delta, user_id, product_id),
@@ -57,7 +55,7 @@ def clear_cart_db(user_id: int):
 
 
 def apply_promo_to_cart_item(user_id: int, product_id: int, code: str):
-    promo = get_promo(code)
+    promo = get_promo(code, product_id=product_id)
     if not promo:
         return False, None
 
@@ -77,8 +75,26 @@ def apply_promo_to_cart_item(user_id: int, product_id: int, code: str):
     changed = cursor.rowcount > 0
     conn.commit()
     conn.close()
-
     return changed, discount
+
+
+def apply_promo_to_cart(user_id: int, code: str):
+    """Apply a promo to all eligible cart items. Product-specific promo touches only its product."""
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT product_id FROM cart WHERE user_id = ?", (user_id,))
+    product_ids = [int(row["product_id"]) for row in cursor.fetchall()]
+    conn.close()
+
+    applied = 0
+    last_discount = None
+    for product_id in product_ids:
+        ok, discount = apply_promo_to_cart_item(user_id, product_id, code)
+        if ok:
+            applied += 1
+            last_discount = discount
+
+    return applied > 0, applied, last_discount
 
 
 def get_cart_items_db(user_id: int):
@@ -86,13 +102,7 @@ def get_cart_items_db(user_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT
-            c.product_id,
-            c.qty,
-            c.promo_code,
-            c.discount_percent,
-            p.name,
-            p.price
+        SELECT c.product_id, c.qty, c.promo_code, c.discount_percent, p.name, p.price
         FROM cart c
         JOIN products p ON p.id = c.product_id
         WHERE c.user_id = ?
@@ -115,11 +125,9 @@ def get_cart_items_db(user_id: int):
         subtotal = price * qty
         discount_amount = subtotal * discount_percent / 100
         final_subtotal = subtotal - discount_amount
-
         total_before_discount += subtotal
         total_discount += discount_amount
         total += final_subtotal
-
         items.append(
             {
                 "product_id": row["product_id"],

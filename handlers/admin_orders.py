@@ -7,9 +7,11 @@ from handlers.pickup import PICKUP_READY_STATUS, pickup_button, send_pickup_info
 from database.orders_db import (
     STATUSES,
     get_all_orders,
+    count_all_orders,
     get_active_orders,
     get_order,
     update_order_status,
+    delete_cancelled_order,
     format_items,
     next_status,
 )
@@ -17,67 +19,34 @@ from database.custom_orders_db import (
     get_active_custom_orders,
     get_custom_order,
     update_custom_order_status,
+    delete_cancelled_custom_order,
     next_custom_status,
 )
 
+ORDERS_PAGE_SIZE = 10
 
-async def list_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
 
-    orders = get_all_orders()
-
-    if not orders:
-        await update.message.reply_text("Замовлень поки немає 📦")
-        return
-
-    text = "📦 ВСІ ЗАМОВЛЕННЯ:\n\n"
-
+def _orders_page_keyboard(orders, page: int, total: int):
+    keyboard = []
     for order in orders:
-        text += f"""
-ID: {order['id']}
-Клієнт: {order['name']}
-Телефон: {order['phone']}
-Статус: {order['status']}
-Сума: {float(order['total'] or 0):.2f} zł
-{format_items(order['items'])}
-------------------
-"""
-
-    await update.message.reply_text(text)
-
-
-async def set_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return
-
-    if len(context.args) < 2:
-        await update.message.reply_text("Формат: /set_status ID Статус")
-        return
-
-    try:
-        order_id = int(context.args[0])
-    except ValueError:
-        await update.message.reply_text("ID має бути числом.")
-        return
-
-    new_status = " ".join(context.args[1:]).strip()
-
-    if new_status not in STATUSES:
-        await update.message.reply_text("Невірний статус. Доступні:\n" + "\n".join(STATUSES))
-        return
-
-    changed = update_order_status(order_id, new_status)
-
-    if changed:
-        await update.message.reply_text("✅ Статус оновлено")
-    else:
-        await update.message.reply_text("❌ Замовлення не знайдено")
+        keyboard.append([
+            InlineKeyboardButton(
+                f"#{order['id']} — {order['name']} — {order['status']} — {float(order['total'] or 0):.2f} zł",
+                callback_data=f"admin_order_{order['id']}",
+            )
+        ])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin_orders_page_{page - 1}"))
+    if (page + 1) * ORDERS_PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("Вперед ➡️", callback_data=f"admin_orders_page_{page + 1}"))
+    if nav:
+        keyboard.append(nav)
+    return InlineKeyboardMarkup(keyboard)
 
 
 def _active_orders_keyboard(regular_orders, custom_orders):
     keyboard = []
-
     for order in regular_orders:
         keyboard.append([
             InlineKeyboardButton(
@@ -85,7 +54,6 @@ def _active_orders_keyboard(regular_orders, custom_orders):
                 callback_data=f"admin_order_{order['id']}",
             )
         ])
-
     for order in custom_orders:
         keyboard.append([
             InlineKeyboardButton(
@@ -93,51 +61,113 @@ def _active_orders_keyboard(regular_orders, custom_orders):
                 callback_data=f"admin_custom_order_{order['id']}",
             )
         ])
-
     return InlineKeyboardMarkup(keyboard)
+
+
+def _order_keyboard(order):
+    keyboard = []
+    next_value, button_text = next_status(order["status"])
+    if next_value:
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"admin_next_status_{order['id']}")])
+    if order["status"] not in ("Завершено", "Скасовано"):
+        keyboard.append([InlineKeyboardButton("❌ Скасувати замовлення", callback_data=f"admin_cancel_order_{order['id']}")])
+    if order["status"] == "Скасовано":
+        keyboard.append([InlineKeyboardButton("🗑️ Видалити замовлення", callback_data=f"admin_delete_order_{order['id']}")])
+    return InlineKeyboardMarkup(keyboard) if keyboard else None
+
+
+def _custom_order_keyboard(order):
+    keyboard = []
+    next_value, button_text = next_custom_status(order["status"])
+    if next_value:
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=f"admin_next_custom_status_{order['id']}")])
+    if order["status"] not in ("Завершено", "Скасовано"):
+        keyboard.append([InlineKeyboardButton("❌ Скасувати замовлення", callback_data=f"admin_cancel_custom_order_{order['id']}")])
+    if order["status"] == "Скасовано":
+        keyboard.append([InlineKeyboardButton("🗑️ Видалити замовлення", callback_data=f"admin_delete_custom_order_{order['id']}")])
+    return InlineKeyboardMarkup(keyboard) if keyboard else None
+
+
+async def list_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        return
+    await _send_orders_page(update, context, page=0, edit=False)
+
+
+async def orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        return
+    page = int(query.data.split("_")[-1])
+    await _send_orders_page(update, context, page=page, edit=True)
+
+
+async def _send_orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int, edit: bool):
+    total = count_all_orders()
+    if total == 0:
+        text = "Замовлень поки немає 🧁"
+        if edit:
+            await update.callback_query.message.edit_text(text)
+        else:
+            await update.message.reply_text(text)
+        return
+
+    offset = page * ORDERS_PAGE_SIZE
+    orders = get_all_orders(limit=ORDERS_PAGE_SIZE, offset=offset)
+    max_page = (total - 1) // ORDERS_PAGE_SIZE
+    text = f"📦 Усі замовлення — сторінка {page + 1}/{max_page + 1}\nОберіть замовлення:"
+    keyboard = _orders_page_keyboard(orders, page, total)
+    if edit:
+        await update.callback_query.message.edit_text(text, reply_markup=keyboard)
+    else:
+        await update.message.reply_text(text, reply_markup=keyboard)
+
+
+async def set_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        return
+    if len(context.args) < 2:
+        await update.message.reply_text("Формат: /set_status ID Статус")
+        return
+    try:
+        order_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("ID має бути числом.")
+        return
+    new_status = " ".join(context.args[1:]).strip()
+    if new_status not in STATUSES:
+        await update.message.reply_text("Невірний статус.\nДоступні:\n" + "\n".join(STATUSES))
+        return
+    changed = update_order_status(order_id, new_status)
+    await update.message.reply_text("✅ Статус оновлено" if changed else "❌ Замовлення не знайдено")
 
 
 async def active_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Цей розділ доступний тільки адміністратору.")
         return
-
     regular_orders = get_active_orders()
     custom_orders = get_active_custom_orders()
-
     if not regular_orders and not custom_orders:
         await update.message.reply_text("Активних замовлень немає ✅")
         return
-
-    await update.message.reply_text(
-        "📋 Активні замовлення:",
-        reply_markup=_active_orders_keyboard(regular_orders, custom_orders),
-    )
+    await update.message.reply_text("📦 Активні замовлення:", reply_markup=_active_orders_keyboard(regular_orders, custom_orders))
 
 
 async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     if not is_admin(query.from_user.id):
         await query.message.reply_text("Недоступно.")
         return
-
     order_id = int(query.data.split("_")[-1])
     order = get_order(order_id)
-
     chat_id = query.message.chat_id
     await delete_callback_message(query)
-
     if not order:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Замовлення не знайдено."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="Замовлення не знайдено.")
         return
-
-    next_value, button_text = next_status(order["status"])
-
     text = f"""
 📦 Замовлення #{order['id']}
 
@@ -149,43 +179,22 @@ async def show_admin_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 {format_items(order['items'])}
 """
-
-    keyboard = None
-    if next_value:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(button_text, callback_data=f"admin_next_status_{order['id']}")]
-        ])
-
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=text,
-        reply_markup=keyboard
-    )
+    await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=_order_keyboard(order))
 
 
 async def show_admin_custom_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     if not is_admin(query.from_user.id):
         await query.message.reply_text("Недоступно.")
         return
-
     order_id = int(query.data.split("_")[-1])
     order = get_custom_order(order_id)
-
     chat_id = query.message.chat_id
     await delete_callback_message(query)
-
     if not order:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Індивідуальне замовлення не знайдено."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="Індивідуальне замовлення не знайдено.")
         return
-
-    next_value, button_text = next_custom_status(order["status"])
-
     text = f"""
 🎂 Індивідуальне замовлення C#{order['id']}
 
@@ -196,146 +205,133 @@ async def show_admin_custom_order(update: Update, context: ContextTypes.DEFAULT_
 Статус: {order['status']}
 Базовий десерт: {order['product_name'] or '—'}
 
-Опис:
-{order['description']}
+Опис: {order['description']}
 """
-
-    keyboard = None
-    if next_value:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(button_text, callback_data=f"admin_next_custom_status_{order['id']}")]
-        ])
-
     if order["photo"]:
-        await context.bot.send_photo(
-            chat_id=chat_id,
-            photo=order["photo"],
-            caption=text,
-            reply_markup=keyboard,
-        )
+        await context.bot.send_photo(chat_id=chat_id, photo=order["photo"], caption=text, reply_markup=_custom_order_keyboard(order))
     else:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=text,
-            reply_markup=keyboard,
-        )
+        await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=_custom_order_keyboard(order))
 
 
 async def advance_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     if not is_admin(query.from_user.id):
         await query.message.reply_text("Недоступно.")
         return
-
     order_id = int(query.data.split("_")[-1])
     order = get_order(order_id)
-
     chat_id = query.message.chat_id
     await delete_callback_message(query)
-
     if not order:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Замовлення не знайдено."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="Замовлення не знайдено.")
         return
-
     next_value, _ = next_status(order["status"])
     if not next_value:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Замовлення вже завершено."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="Замовлення вже завершено або скасовано.")
         return
-
     update_order_status(order_id, next_value)
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"✅ Статус замовлення #{order_id} змінено на: {next_value}"
-    )
-
+    await context.bot.send_message(chat_id=chat_id, text=f"✅ Статус замовлення #{order_id} змінено на: {next_value}")
     if next_value == PICKUP_READY_STATUS:
         await context.bot.send_message(
             chat_id=order["user_id"],
             text=f"✅ Ваше замовлення #{order_id} готове до видачі.",
             reply_markup=pickup_button(f"pickup_order_{order_id}", order["user_id"]),
         )
-        await send_pickup_info_to_chat(
-            context=context,
-            chat_id=order["user_id"],
-            user_id=order["user_id"],
-        )
-
+        await send_pickup_info_to_chat(context=context, chat_id=order["user_id"], user_id=order["user_id"])
     refreshed = get_order(order_id)
-    next_next_value, button_text = next_status(refreshed["status"])
-    if next_next_value:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(button_text, callback_data=f"admin_next_status_{order_id}")]
-        ])
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Наступна дія:",
-            reply_markup=keyboard
-        )
+    if refreshed:
+        await context.bot.send_message(chat_id=chat_id, text="Наступна дія:", reply_markup=_order_keyboard(refreshed))
 
 
 async def advance_custom_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     if not is_admin(query.from_user.id):
         await query.message.reply_text("Недоступно.")
         return
-
     order_id = int(query.data.split("_")[-1])
     order = get_custom_order(order_id)
-
     chat_id = query.message.chat_id
     await delete_callback_message(query)
-
     if not order:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Індивідуальне замовлення не знайдено."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="Індивідуальне замовлення не знайдено.")
         return
-
     next_value, _ = next_custom_status(order["status"])
     if not next_value:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Замовлення вже завершено."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="Замовлення вже завершено або скасовано.")
         return
-
     update_custom_order_status(order_id, next_value)
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"✅ Статус індивідуального замовлення C#{order_id} змінено на: {next_value}"
-    )
-
+    await context.bot.send_message(chat_id=chat_id, text=f"✅ Статус індивідуального замовлення C#{order_id} змінено на: {next_value}")
     if next_value == PICKUP_READY_STATUS:
         await context.bot.send_message(
             chat_id=order["user_id"],
             text=f"✅ Ваше індивідуальне замовлення C#{order_id} готове до видачі.",
             reply_markup=pickup_button(f"pickup_custom_order_{order_id}", order["user_id"]),
         )
-        await send_pickup_info_to_chat(
-            context=context,
-            chat_id=order["user_id"],
-            user_id=order["user_id"],
-        )
-
+        await send_pickup_info_to_chat(context=context, chat_id=order["user_id"], user_id=order["user_id"])
     refreshed = get_custom_order(order_id)
-    next_next_value, button_text = next_custom_status(refreshed["status"])
-    if next_next_value:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(button_text, callback_data=f"admin_next_custom_status_{order_id}")]
-        ])
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="Наступна дія:",
-            reply_markup=keyboard
-        )
+    if refreshed:
+        await context.bot.send_message(chat_id=chat_id, text="Наступна дія:", reply_markup=_custom_order_keyboard(refreshed))
+
+
+async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.message.reply_text("Недоступно.")
+        return
+    order_id = int(query.data.split("_")[-1])
+    await delete_callback_message(query)
+    changed = update_order_status(order_id, "Скасовано")
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=(f"❌ Замовлення #{order_id} скасовано." if changed else "Замовлення не знайдено."),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑️ Видалити замовлення", callback_data=f"admin_delete_order_{order_id}")]]) if changed else None,
+    )
+
+
+async def cancel_custom_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.message.reply_text("Недоступно.")
+        return
+    order_id = int(query.data.split("_")[-1])
+    await delete_callback_message(query)
+    changed = update_custom_order_status(order_id, "Скасовано")
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=(f"❌ Індивідуальне замовлення C#{order_id} скасовано." if changed else "Замовлення не знайдено."),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑️ Видалити замовлення", callback_data=f"admin_delete_custom_order_{order_id}")]]) if changed else None,
+    )
+
+
+async def delete_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.message.reply_text("Недоступно.")
+        return
+    order_id = int(query.data.split("_")[-1])
+    await delete_callback_message(query)
+    deleted = delete_cancelled_order(order_id)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=(f"🗑️ Скасоване замовлення #{order_id} видалено." if deleted else "Видаляти можна тільки скасовані замовлення."),
+    )
+
+
+async def delete_custom_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.message.reply_text("Недоступно.")
+        return
+    order_id = int(query.data.split("_")[-1])
+    await delete_callback_message(query)
+    deleted = delete_cancelled_custom_order(order_id)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=(f"🗑️ Скасоване індивідуальне замовлення C#{order_id} видалено." if deleted else "Видаляти можна тільки скасовані замовлення."),
+    )

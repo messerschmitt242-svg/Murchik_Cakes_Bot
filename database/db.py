@@ -3,10 +3,7 @@ import sqlite3
 
 
 def _default_db_path() -> str:
-    """
-    Railway: если подключен Volume на /data — база будет храниться там.
-    Локально/GitHub: база будет в папке data/data.db.
-    """
+    """Railway: if Volume is mounted at /data, keep DB there."""
     if os.path.isdir("/data"):
         return "/data/data.db"
     return os.path.join("data", "data.db")
@@ -117,7 +114,7 @@ def init_db():
         )
     """)
 
-    # Мягкая миграция старых БД, если таблицы уже были созданы иначе.
+    # Soft migrations for old databases.
     _ensure_column(cursor, "products", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
     _ensure_column(cursor, "products", "category", "TEXT DEFAULT 'Торти'")
     _ensure_column(cursor, "products", "translations", "TEXT DEFAULT '{}'")
@@ -126,6 +123,7 @@ def init_db():
     _ensure_column(cursor, "orders", "items", "TEXT DEFAULT ''")
     _ensure_column(cursor, "orders", "total", "REAL DEFAULT 0")
     _ensure_column(cursor, "orders", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP")
+    _ensure_column(cursor, "promo_codes", "product_id", "INTEGER DEFAULT NULL")
     _ensure_column(cursor, "reviews", "review_type", "TEXT DEFAULT 'bakery'")
     _ensure_column(cursor, "reviews", "product_id", "INTEGER DEFAULT NULL")
     _ensure_column(cursor, "reviews", "product_name", "TEXT DEFAULT ''")
