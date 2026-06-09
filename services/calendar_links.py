@@ -20,7 +20,7 @@ def _calendar_dates(order_date: str = "") -> str:
 
 
 def calendar_order_url(order_id: int, webapp_url: str = "") -> str:
-    """Universal calendar URL. On iPhone this opens an .ics file in Apple Calendar.
+    """Direct .ics URL kept for API compatibility.
 
     WEBAPP_URL may contain query params used for cache busting, e.g.
     https://domain/?v=clean-user-2. For API links we must use only the origin,
@@ -49,7 +49,7 @@ def google_calendar_order_url(
     payment_method: str = "",
     comment: str = "",
 ) -> str:
-    """Legacy fallback for old code paths. Prefer calendar_order_url for iPhone/Apple Calendar."""
+    """Create a Google Calendar prefilled event URL for admin notifications."""
     details = (
         f"Клієнт: {customer_name}\n"
         f"Телефон: {phone}\n"

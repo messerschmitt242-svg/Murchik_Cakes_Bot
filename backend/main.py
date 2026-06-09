@@ -10,7 +10,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import Response
+from fastapi.responses import Response, RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 
 from config import BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_IDS
@@ -39,6 +39,7 @@ from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
 from utils_dates import min_order_date_text, validate_order_date
 from services.calendar_links import build_order_ics, google_calendar_order_url
+from services.google_tasks import create_google_task_for_order, TASKS_HOME_URL, build_google_auth_url, exchange_code_for_refresh_token, google_tasks_status, google_redirect_uri
 
 app = FastAPI(title="Murchik Cakes API", version="3.6.1-hotfix")
 app.add_middleware(
@@ -168,6 +169,65 @@ def _order_contains_product(order, product_id: int) -> bool:
 
 def _completed_status(status: str) -> bool:
     return status in ("Завершено", "Завершений", "Completed", "done", "completed")
+
+
+
+
+@app.get("/admin/google/status")
+def admin_google_status():
+    return google_tasks_status()
+
+
+@app.get("/admin/google/connect")
+def admin_google_connect():
+    try:
+        return RedirectResponse(build_google_auth_url(), status_code=302)
+    except Exception as exc:
+        return HTMLResponse(
+            f"""
+            <html><body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; padding: 24px;">
+            <h2>Google Tasks не налаштовано</h2>
+            <p>{str(exc)}</p>
+            <p>У Google Cloud створи OAuth client типу <b>Web application</b> і додай redirect URI:</p>
+            <pre>{google_redirect_uri() or 'WEBAPP_URL is empty'}</pre>
+            <p>Потім додай у Railway API-сервіс тільки GOOGLE_CLIENT_ID і GOOGLE_CLIENT_SECRET.</p>
+            </body></html>
+            """,
+            status_code=500,
+        )
+
+
+@app.get("/admin/google/callback")
+def admin_google_callback(code: str = "", state: str = "", error: str = ""):
+    if error:
+        return HTMLResponse(f"<h2>Google OAuth error</h2><p>{error}</p>", status_code=400)
+    if not code:
+        return HTMLResponse("<h2>Google OAuth error</h2><p>No authorization code received.</p>", status_code=400)
+    try:
+        result = exchange_code_for_refresh_token(code, state)
+        account = result.get("account_email") or "Google account"
+        return HTMLResponse(
+            f"""
+            <html><body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; padding: 24px;">
+            <h2>✅ Google Tasks підключено</h2>
+            <p>Акаунт: <b>{account}</b></p>
+            <p>Тепер нові замовлення Murchik Cakes будуть автоматично створюватися як задачі Google Tasks.</p>
+            <p>Цю вкладку можна закрити.</p>
+            </body></html>
+            """
+        )
+    except Exception as exc:
+        return HTMLResponse(
+            f"""
+            <html><body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; padding: 24px;">
+            <h2>❌ Не вдалося підключити Google Tasks</h2>
+            <p>{str(exc)}</p>
+            <p>Перевір, що в Google Cloud в OAuth client додано redirect URI:</p>
+            <pre>{google_redirect_uri() or 'WEBAPP_URL is empty'}</pre>
+            </body></html>
+            """,
+            status_code=500,
+        )
 
 
 @app.get("/api/health")
@@ -362,7 +422,7 @@ def _telegram_send_message(chat_id: int, text: str, reply_markup: dict | None = 
     return ok
 
 
-def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict], total: float, before: float, discount: float) -> int:
+def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict], total: float, before: float, discount: float, google_task: dict | None = None) -> int:
     if not BOT_TOKEN:
         print("ADMIN NOTIFY WARNING: BOT_TOKEN is empty")
         return 0
@@ -392,6 +452,7 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
 Оплата: {req.payment_method}
 Разом: {total:.2f} zł
 Коментар: {req.comment.strip() or '—'}
+Google Tasks: {'✅ задачу створено' if google_task else '⚠️ задачу не створено'}
 {discount_text}
 ────────────
 {items_text}"""
@@ -406,12 +467,12 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
         payment_method=req.payment_method,
         comment=req.comment.strip(),
     )
-    reply_markup = {
-        "inline_keyboard": [
-            [{"text": "📋 Відкрити замовлення", "callback_data": f"admin_order_{order_id}"}],
-            [{"text": "📅 Додати в календар", "url": calendar_url}],
-        ]
-    }
+    inline_keyboard = [[{"text": "📋 Відкрити замовлення", "callback_data": f"admin_order_{order_id}"}]]
+    if google_task:
+        inline_keyboard.append([{"text": "✅ Відкрити Google Tasks", "url": TASKS_HOME_URL}])
+    else:
+        inline_keyboard.append([{"text": "📅 Додати в календар", "url": calendar_url}])
+    reply_markup = {"inline_keyboard": inline_keyboard}
 
     success = 0
     for chat_id in targets:
@@ -458,8 +519,20 @@ def create_order_api(req: OrderRequest):
         comment=req.comment,
     )
     clear_cart_db(req.user_id)
-    admin_notified = _notify_admins_new_order(order_id, req, items, total, before, discount)
-    return {"id": order_id, "status": "Прийнято", "total": total, "admin_notified": admin_notified}
+    items_text = _format_order_items_for_admin(items)
+    google_task = create_google_task_for_order(
+        order_id=order_id,
+        customer_name=req.name.strip(),
+        phone=normalized_phone,
+        items_text=items_text,
+        total=total,
+        order_date=req.date,
+        delivery_method=req.delivery_method,
+        payment_method=req.payment_method,
+        comment=req.comment.strip(),
+    )
+    admin_notified = _notify_admins_new_order(order_id, req, items, total, before, discount, google_task=google_task)
+    return {"id": order_id, "status": "Прийнято", "total": total, "admin_notified": admin_notified, "google_task_created": bool(google_task)}
 
 
 @app.get("/api/orders/{order_id}/calendar.ics")

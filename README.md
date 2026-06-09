@@ -496,3 +496,34 @@ python scripts/send_channel_post.py
 ```bash
 CHANNEL_POST_INSTRUCTIONS.md
 ```
+
+## Google Tasks для заказов
+
+При создании заказа API может автоматически создавать задачу в Google Tasks. Это не блокирует оформление заказа: если Google не настроен или временно недоступен, заказ всё равно создаётся, а в логах будет `GOOGLE TASKS WARNING/ERROR`.
+
+Нужные переменные Railway для сервиса API / Mini App:
+
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REFRESH_TOKEN=...
+GOOGLE_TASKLIST_ID=@default
+```
+
+`GOOGLE_TASKLIST_ID` можно не добавлять — тогда используется основной список задач `@default`.
+
+Как получить `GOOGLE_REFRESH_TOKEN`:
+
+1. В Google Cloud включить **Google Tasks API**.
+2. Создать OAuth Client ID для Desktop app.
+3. Локально задать `GOOGLE_CLIENT_ID` и `GOOGLE_CLIENT_SECRET`.
+4. Запустить:
+
+```bash
+python scripts/google_tasks_oauth.py
+```
+
+5. Открыть ссылку, разрешить доступ и вставить код в терминал.
+6. Добавить полученный `GOOGLE_REFRESH_TOKEN` в Railway Variables сервиса API / Mini App.
+
+Используется scope `https://www.googleapis.com/auth/tasks`.

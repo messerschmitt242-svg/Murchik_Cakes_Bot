@@ -14,6 +14,8 @@ from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
 from handlers.admin_notify import notify_admins_text, admin_contact_keyboard
 from locales import tr
+from services.calendar_links import google_calendar_order_url
+from services.google_tasks import create_google_task_for_order, TASKS_HOME_URL
 
 CART_NAME = 200
 CART_PHONE = 201
@@ -205,10 +207,28 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
 Разом: {total:.2f} zł
 Статус: Прийнято
 """
-    admin_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📋 Відкрити замовлення", callback_data=f"admin_order_{order_id}")],
-        [InlineKeyboardButton("📅 Додати в календар", callback_data=f"admin_calendar_order_{order_id}")],
-    ])
+    google_task = create_google_task_for_order(
+        order_id=order_id,
+        customer_name=name,
+        phone=phone,
+        items_text=items_text,
+        total=total,
+    )
+    calendar_url = google_calendar_order_url(
+        order_id=order_id,
+        customer_name=name,
+        phone=phone,
+        items_text=items_text,
+        total=total,
+    )
+    admin_buttons = [[InlineKeyboardButton("📋 Відкрити замовлення", callback_data=f"admin_order_{order_id}")]]
+    if google_task:
+        admin_buttons.append([InlineKeyboardButton("✅ Відкрити Google Tasks", url=TASKS_HOME_URL)])
+        admin_text += "\nGoogle Tasks: ✅ задачу створено"
+    else:
+        admin_buttons.append([InlineKeyboardButton("📅 Додати в календар", url=calendar_url)])
+        admin_text += "\nGoogle Tasks: ⚠️ задачу не створено"
+    admin_keyboard = InlineKeyboardMarkup(admin_buttons)
     admin_notified = await notify_admins_text(context=context, text=admin_text, reply_markup=admin_keyboard)
 
     if admin_notified > 0:

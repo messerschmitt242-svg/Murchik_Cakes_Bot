@@ -202,6 +202,14 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                service TEXT PRIMARY KEY,
+                refresh_token TEXT NOT NULL,
+                account_email TEXT DEFAULT '',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
     else:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS products (
@@ -278,6 +286,14 @@ def init_db():
                 photo TEXT DEFAULT '',
                 status TEXT DEFAULT 'Прийнято',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS google_oauth_tokens (
+                service TEXT PRIMARY KEY,
+                refresh_token TEXT NOT NULL,
+                account_email TEXT DEFAULT '',
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
