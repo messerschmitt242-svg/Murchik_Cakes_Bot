@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 
 def _calendar_start(order_date: str = "") -> datetime:
@@ -20,11 +20,22 @@ def _calendar_dates(order_date: str = "") -> str:
 
 
 def calendar_order_url(order_id: int, webapp_url: str = "") -> str:
-    """Universal calendar URL. On iPhone this opens an .ics file in Apple Calendar."""
-    base = (webapp_url or "").strip().rstrip("/")
-    if base:
-        return f"{base}/api/orders/{int(order_id)}/calendar.ics"
-    return ""
+    """Universal calendar URL. On iPhone this opens an .ics file in Apple Calendar.
+
+    WEBAPP_URL may contain query params used for cache busting, e.g.
+    https://domain/?v=clean-user-2. For API links we must use only the origin,
+    otherwise the URL becomes https://domain/?v=.../api/orders/... and FastAPI
+    never receives the /api route.
+    """
+    raw = (webapp_url or "").strip()
+    if not raw:
+        return ""
+    parsed = urlsplit(raw)
+    if parsed.scheme and parsed.netloc:
+        base = urlunsplit((parsed.scheme, parsed.netloc, "", "", "")).rstrip("/")
+    else:
+        base = raw.split("?", 1)[0].rstrip("/")
+    return f"{base}/api/orders/{int(order_id)}/calendar.ics"
 
 
 def google_calendar_order_url(
