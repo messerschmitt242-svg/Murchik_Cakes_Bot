@@ -1,7 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
-from config import WEBAPP_URL
-
 from database.cart_db import (
     add_to_cart_db,
     get_cart_items_db,
@@ -16,7 +14,6 @@ from keyboards.main_menu import get_main_menu
 from handlers.cleanup import delete_callback_message
 from handlers.admin_notify import notify_admins_text, admin_contact_keyboard
 from locales import tr
-from services.calendar_links import calendar_order_url
 
 CART_NAME = 200
 CART_PHONE = 201
@@ -208,10 +205,9 @@ async def checkout_get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE)
 Разом: {total:.2f} zł
 Статус: Прийнято
 """
-    calendar_url = calendar_order_url(order_id, WEBAPP_URL)
     admin_keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📋 Відкрити замовлення", callback_data=f"admin_order_{order_id}")],
-        [InlineKeyboardButton("📅 Додати в календар", url=calendar_url)],
+        [InlineKeyboardButton("📅 Додати в календар", callback_data=f"admin_calendar_order_{order_id}")],
     ])
     admin_notified = await notify_admins_text(context=context, text=admin_text, reply_markup=admin_keyboard)
 

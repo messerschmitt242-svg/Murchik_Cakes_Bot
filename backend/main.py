@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from config import BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_IDS, WEBAPP_URL
+from config import BOT_TOKEN, ADMIN_IDS, ADMIN_CHAT_IDS
 from database.db import init_db
 from database.products_db import get_all_products, get_product, get_categories
 from database.cart_db import (
@@ -38,7 +38,7 @@ from database.reviews_db import (
 from database.user_settings_db import get_user_language, set_user_language
 from utils_translation import translate_product_name, translate_description, translate_product_name_raw
 from utils_dates import min_order_date_text, validate_order_date
-from services.calendar_links import calendar_order_url, build_order_ics
+from services.calendar_links import build_order_ics
 
 app = FastAPI(title="Murchik Cakes API", version="3.6.1-hotfix")
 app.add_middleware(
@@ -395,11 +395,10 @@ def _notify_admins_new_order(order_id: int, req: OrderRequest, items: list[dict]
 {discount_text}
 ────────────
 {items_text}"""
-    calendar_url = calendar_order_url(order_id, WEBAPP_URL)
     reply_markup = {
         "inline_keyboard": [
             [{"text": "📋 Відкрити замовлення", "callback_data": f"admin_order_{order_id}"}],
-            [{"text": "📅 Додати в календар", "url": calendar_url}],
+            [{"text": "📅 Додати в календар", "callback_data": f"admin_calendar_order_{order_id}"}],
         ]
     }
 

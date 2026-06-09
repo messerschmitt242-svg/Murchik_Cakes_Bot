@@ -120,6 +120,7 @@ from handlers.update_photos import (
     UPDATE_PHOTOS_UPLOAD,
 )
 
+from handlers.calendar_export import send_order_calendar_file
 from handlers.custom_order import (
     custom_order_start,
     custom_get_name,
@@ -283,6 +284,7 @@ def build_app():
 
     app.add_handler(CallbackQueryHandler(delete_product_callback, pattern=r"^delete_product_\d+$"))
     app.add_handler(CallbackQueryHandler(orders_page, pattern=r"^admin_orders_page_\d+$"))
+    app.add_handler(CallbackQueryHandler(send_order_calendar_file, pattern=r"^admin_calendar_order_\d+$"))
     app.add_handler(CallbackQueryHandler(show_admin_order, pattern=r"^admin_order_\d+$"))
     app.add_handler(CallbackQueryHandler(show_admin_custom_order, pattern=r"^admin_custom_order_\d+$"))
     app.add_handler(CallbackQueryHandler(advance_order_status, pattern=r"^admin_next_status_\d+$"))
